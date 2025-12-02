@@ -62,15 +62,16 @@ The system differentiates access for three user groups: Facilitators, Partner M&
 src/
 └── main/        
     └── java/
-        ├── controllers/              # REST endpoints
-        ├── services/                 # Business logic
-        ├── repositories/             # JPA repositories
-        ├── models/                   # Entities
-        ├── configurations/           # Security & global config
-        ├── dtos/                     # DTOs
-        ├── exceptions/               # Global & Custom Exceptions
-        ├── filters/                  # Filters (Jwt Filter and Others)
-        └── App                       # The main spring class
+        └── com.dseme.app/
+            ├── controllers/              # REST endpoints
+            ├── services/                 # Business logic
+            ├── repositories/             # JPA repositories
+            ├── models/                   # Entities
+            ├── configurations/           # Security & global config
+            ├── dtos/                     # DTOs
+            ├── exceptions/               # Global & Custom Exceptions
+            ├── filters/                  # Filters (Jwt Filter and Others)
+            └── App                       # The main spring class
     └── resources/
         ├── application.yaml          # The main configuration file
         └── static/...
@@ -102,7 +103,7 @@ src/
 
 - Docker / Docker Compose
 
-### Steps
+## Steps
 - 1. Clone the repository
        git clone https://github.com/your-org/DSE-ME-Platform.git
        cd DSE-ME-Platform
@@ -134,9 +135,9 @@ src/
 
     Navigate to:
     
-    👉 http://localhost:8080
+     http://localhost:8088
 
-### Scripts
+## Scripts
 Command	                        Description
 ./mvnw spring-boot:run	        Start development server
 ./mvnw test	                    Run tests
@@ -144,7 +145,7 @@ mvn clean package	            Build production JAR
 docker-compose up	            Run system with Docker (if enabled)
 
 ## Key Features Implementation
-- Authentication & Authorization
+### Authentication & Authorization
 
 - Secure login (JWT)
 
@@ -152,13 +153,13 @@ docker-compose up	            Run system with Docker (if enabled)
 
 - Role-based views:
 
--- Facilitator: Center-level participant & training management
+- - Facilitator: Center-level participant & training management
 
--- Partner M&E Officer: Approvals, partner-wide data, reporting
+- - Partner M&E Officer: Approvals, partner-wide data, reporting
 
--- Donor: Aggregated KPIs, cross-partner dashboards
+- - Donor: Aggregated KPIs, cross-partner dashboards
 
--- Routing & API Endpoints
+### Routing & API Endpoints
 
 Examples:
 
@@ -171,87 +172,79 @@ Endpoint	                    Method	                Description
 /api/attendance	                POST	                Record attendance
 /api/dashboard/donor	        GET	                    Donor analytics
 /api/reports/export	            GET	                    Download CSV/PDF
-📊 Dashboards
-Facilitator Dashboard
 
-Attendance
+## Dashboards
 
-Cohort performance
+### Facilitator Dashboard
 
-Incomplete profiles
+- Attendance
 
-Scores overview
+- Cohort performance
 
-Partner M&E Dashboard
+- Incomplete profiles
 
-Cohort comparisons
+- Scores overview
 
-Attendance trends
+### Partner M&E Dashboard
 
-Assessment performance
+- Cohort comparisons
 
-Internship & employment data
+- Attendance trends
 
-Donor Dashboard
+- Assessment performance
 
-Portfolio-wide KPIs
+- Internship & employment data
 
-Partner comparison views
+### Donor Dashboard
 
-Demographics (gender, disability, region)
+- Portfolio-wide KPIs
 
-Outcome analytics
+- Partner comparison views
 
-📤 Reporting & Alerts
+- Demographics (gender, disability, region)
 
-Export CSV/PDF
+- Outcome analytics
 
-Scheduled weekly/monthly reports
+## Reporting & Alerts
 
-Real-time alerts:
+- Export CSV/PDF
 
-Missing attendance
+- Scheduled weekly/monthly reports
 
-Data inconsistencies
+- - Real-time alerts:
 
-KPI warnings (dropouts, low employment)
+- - Missing attendance
 
-🧩 Design Features
+- - Data inconsistencies
 
-Data privacy enforced per user role
+- - KPI warnings (dropouts, low employment)
 
-Multi-tenant isolation
+## Design Features
 
-Clean, structured APIs
+- Data privacy enforced per user role
 
-Fast database querying
+- Multi-tenant isolation
 
-Portable deployment with Docker
+- Clean, structured APIs
+
+- Fast database querying
+
+- Portable deployment with Docker
 
 📸 Screenshots
 
-(You can add them later)
+(Will be added later)
 
-Partner dashboard
+## Partner dashboard
 
-Donor dashboard
+## Donor dashboard
 
-Participant management view
+## Participant management view
 
-Enrollment page
+## Enrollment page
 
-Attendance / scores input forms
+## Attendance / scores input forms
 
-🌐 Live Demo
+## Live Demo
 
 (To be added when deployed)
-
-🙌 Acknowledgments
-
-Mastercard Foundation DSE Program
-
-SheCanCODE technical support
-
-Spring Boot & PostgreSQL community
-
-Swagger/OpenAPI for documentation
