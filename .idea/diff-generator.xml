@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DiffGenerationConfig">
+    <option name="snapshotDb" value="false" />
+    <option name="snapshotModelValue" value="dse-backend:dse-backend" />
+    <option name="sourceDbValue" value="2bc6a19c-1fb4-4aa1-9941-dae86434726d" />
+    <option name="sourceDiffType" value="DB" />
+    <option name="sourceModelValue" value="dse-backend:dse-backend" />
+    <option name="targetDbValue" value="2bc6a19c-1fb4-4aa1-9941-dae86434726d" />
+  </component>
+</project>

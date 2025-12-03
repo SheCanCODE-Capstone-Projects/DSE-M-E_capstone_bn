@@ -36,11 +36,9 @@ The system differentiates access for three user groups: Facilitators, Partner M&
 
 - Multi-Level Data Views:
 
-- - Facilitators → Center-level
-
-- - Partner M&E → Partner-level
-
-- - Donors → Portfolio-wide
+     - Facilitators → Center-level
+     - Partner M&E → Partner-level
+     - Donors → Portfolio-wide
 
 ## Technologies
 
@@ -164,8 +162,10 @@ docker-compose up	            Run system with Docker (if enabled)
 Examples:
 
 Endpoint	                    Method	                Description
-/api/auth/login	                POST	                Login
+/api/auth/signup	            POST	                Register
+/api/auth/signin	            POST	                Login
 /api/partners	                POST	                Create partner
+/api/users/assign-role/{id}	    POST	                Assigning roles to each new users
 /api/users	                    POST	                Create facilitator/mentor
 /api/participants	            POST	                Create/update profile
 /api/enrollment	                POST	                Enroll in cohort
