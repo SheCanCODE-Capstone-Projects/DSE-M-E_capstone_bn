@@ -1,17 +1,19 @@
 spring:
   application:
     name: dse-backend
+  profiles:
+    active: dev
 ---
 spring:
   config:
     activate:
       on-profile: dev
 server:
-  port: 8080
+  port: 8088
 ---
 spring:
   config:
     activate:
       on-profile: prod
 server:
-  port: 8080
+  port: 8088
