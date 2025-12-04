@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="DataSourcePerFileMappings">
-    <file url="file://$PROJECT_DIR$/src/main/resources/db.migration/V1__initial_migration.sql" value="2bc6a19c-1fb4-4aa1-9941-dae86434726d" />
-    <file url="file://$PROJECT_DIR$/src/main/resources/db.migration/V2__changing_role_type_to_varchar.sql" value="2bc6a19c-1fb4-4aa1-9941-dae86434726d" />
-  </component>
-</project>

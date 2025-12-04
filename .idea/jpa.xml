@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="JpaBuddyIdeaProjectConfig">
-    <option name="newEntityIdStrategy" value="Identity" />
-    <option name="reLastEntityCreationPackage" value="src/main/java/com/dseme/app/models" />
-    <option name="reverseEngineeringLastDbConnectionId" value="2bc6a19c-1fb4-4aa1-9941-dae86434726d" />
-  </component>
-</project>
