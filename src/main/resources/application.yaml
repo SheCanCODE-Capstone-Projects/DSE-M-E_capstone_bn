@@ -8,6 +8,13 @@ spring:
   config:
     activate:
       on-profile: dev
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
 server:
   port: 8088
 ---
