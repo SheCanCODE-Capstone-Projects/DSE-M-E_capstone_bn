@@ -15,7 +15,7 @@ public class UserPrincipal implements UserDetails {
         this.user = user;
     }
 
-    // ✅ Fix: convert Role enum to string for Spring Security
+    // Fix: convert Role enum to string for Spring Security
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
