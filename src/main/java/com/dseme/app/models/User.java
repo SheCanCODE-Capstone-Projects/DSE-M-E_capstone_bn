@@ -1,20 +1,20 @@
 package com.dseme.app.models;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Data
+@Builder
 @Getter
 @Setter
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "users")
+
 public class User{
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,7 +34,7 @@ public class User{
     private String lastName;
 
     @Column(name = "is_active")
-    private Boolean isActive;
+    private Boolean isActive =true;
 
     @Column(name = "created_at")
     private Instant createdAt;
