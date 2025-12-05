@@ -25,6 +25,9 @@ spring:
       password: ${SECURITY_USER_PASSWORD:newuser123}
       roles: ${SECURITY_USER_ROLES:ROLE_UNASSIGNED}
 
+jwt:
+  secret: ${JWT_SECRET}
+
 server:
   port: 8088
 ---
