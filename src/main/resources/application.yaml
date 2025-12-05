@@ -21,9 +21,9 @@ spring:
 
   security:
     user:
-      name: newuser
-      password: newuser123
-      roles: UNASSIGNED
+      name: ${SECURITY_USER_NAME:newuser}
+      password: ${SECURITY_USER_PASSWORD:newuser123}
+      roles: ${SECURITY_USER_ROLES:ROLE_UNASSIGNED}
 
 server:
   port: 8088

@@ -44,10 +44,11 @@ public class AuthService {
         user.setEmail(signUpDTO.getEmail());
         user.setPasswordHash(encoder.encode(signUpDTO.getPassword()));
         user.setRole(Role.UNASSIGNED);
+        user.setIsActive(true);
 
         userRepo.save(user);
 
-        return user.getEmail() + " is successfully registered!";
+        return user.getEmail() + " has been successfully registered!";
     }
 
     public String login(LoginDTO loginDTO) {
