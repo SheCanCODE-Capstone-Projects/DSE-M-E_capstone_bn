@@ -29,7 +29,7 @@ public class SecurityConfig {
     }
 
 
-    // ✅ Shared password encoder bean
+    // Shared password encoder bean
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
@@ -56,9 +56,7 @@ public class SecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/login/",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/api/auth/test",
-                                "api/auth/login"
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -47,7 +47,7 @@ public class JwtUtil {
         }
     }
 
-    // ✅ Added for compatibility with filter/controller
+    // Added for compatibility with filter/controller
     public String extractUsername(String token) {
         return getEmailFromToken(token);
     }
