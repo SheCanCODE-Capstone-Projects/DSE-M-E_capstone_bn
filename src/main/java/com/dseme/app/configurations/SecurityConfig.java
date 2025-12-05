@@ -35,7 +35,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
-    // ✅ Authentication provider using shared encoder
+    // Authentication provider using shared encoder
     @Bean
     public AuthenticationProvider authenticationProvider(BCryptPasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -44,11 +44,10 @@ public class SecurityConfig {
         return provider;
     }
 
-    // ✅ Security filter chain
+    // Security filter chain
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -67,7 +66,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ Authentication manager bean
+    // Authentication manager bean
     @Bean
     public AuthenticationManager authenticationManagerBean(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
