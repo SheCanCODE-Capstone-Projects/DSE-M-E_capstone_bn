@@ -248,3 +248,32 @@ Endpoint	                    Method	                Description
 ## Live Demo
 
 (To be added when deployed)
+
+## Login Functionality
+
+Secure JWT-Based Login:
+Users log in with their email and password via the /api/auth/login endpoint.
+
+JWT Token Issued:
+On successful login, the system returns a JWT token that must be included in the Authorization header for accessing protected endpoints.
+
+Role-Based Access:
+The login token enforces role-based access control:
+
+Facilitator → Center-level participant & training management
+
+Partner M&E Officer → Approvals, partner-wide data, reporting
+
+Donor → Aggregated KPIs, cross-partner dashboards
+
+Password Security: Passwords are securely hashed; the system supports password reset functionality.
+
+Example API Request:
+
+POST /api/auth/loginin
+Content-Type: application/json
+
+{
+"email": "user@example.com",
+"password": "userpassword"
+}
