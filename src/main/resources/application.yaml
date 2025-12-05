@@ -14,6 +14,16 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+
+  security:
+    user:
+      name: ${SECURITY_USER_NAME:newuser}
+      password: ${SECURITY_USER_PASSWORD:newuser123}
+      roles: ${SECURITY_USER_ROLES:ROLE_UNASSIGNED}
 
 server:
   port: 8088
