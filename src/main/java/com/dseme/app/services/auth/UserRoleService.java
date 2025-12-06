@@ -1,74 +1,194 @@
 package com.dseme.app.services.auth;
 
 import com.dseme.app.dtos.auth.RoleRequestDTO;
-import com.dseme.app.models.Partner;
-import com.dseme.app.models.Role;
-import com.dseme.app.models.User;
-import com.dseme.app.repositories.PartnerRepository;
-import com.dseme.app.repositories.UserRepository;
+import com.dseme.app.enums.Priority;
+import com.dseme.app.enums.RequestStatus;
+import com.dseme.app.exceptions.ResourceAlreadyExistsException;
+import com.dseme.app.exceptions.ResourceNotFoundException;
+import com.dseme.app.models.*;
+import com.dseme.app.enums.Role;
+import com.dseme.app.repositories.*;
+import com.dseme.app.services.notifications.NotificationService;
+import jakarta.validation.constraints.Null;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class UserRoleService {
 
     private final UserRepository userRepo;
     private final PartnerRepository partnerRepo;
+    private final CenterRepository centerRepo;
+    private final RoleRequestRepository roleRequestRepo;
+    private final NotificationService notificationService;
 
-    public UserRoleService(UserRepository userRepo, PartnerRepository partnerRepo) {
+    public UserRoleService(UserRepository userRepo,
+                           PartnerRepository partnerRepo,
+                           NotificationService notificationService,
+                           CenterRepository centerRepo,
+                           RoleRequestRepository roleRequestRepo) {
         this.userRepo = userRepo;
         this.partnerRepo = partnerRepo;
+        this.notificationService = notificationService;
+        this.centerRepo = centerRepo;
+        this.roleRequestRepo = roleRequestRepo;
+    }
+    
+
+    // Request Role and Permissions from suitable Admins
+    public String requestRoleApproval(UUID userId, RoleRequestDTO request){
+
+        User requester = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Partner targetPartner = partnerRepo.findById(request.getPartnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Partner does not exist"));
+
+        Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(request.getCenterId(), targetPartner.getPartnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("This Center Location is does not belong to " + targetPartner.getPartnerName()));
+
+        Role requestedRole = Role.valueOf(request.getRequestedRole());
+
+        boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterId(requester.getId(), requestedRole, targetPartner.getPartnerId(), targetCenter.getId());
+
+        if (checkDuplicates) {
+            throw new ResourceAlreadyExistsException("This request already exists!");
+        }
+
+        RoleRequest roleRequested = saveRoleRequest(requester, targetPartner, targetCenter, requestedRole);
+
+        List<User> potentialApprovers;
+
+        if( requestedRole == Role.FACILITATOR){
+            potentialApprovers = requestApprovers(Role.ME_OFFICER, targetPartner, targetCenter, requestedRole);
+
+        } else {
+            potentialApprovers = requestApprovers(Role.PARTNER, targetPartner, targetCenter, requestedRole);
+        }
+
+        if(potentialApprovers.isEmpty()){
+            throw new ResourceNotFoundException("Couldn't find anyone suitable to approve your request.");
+        }
+
+        String title = "Approval Request";
+        String message = "User with email : '" + requester.getEmail() +
+                "' wants approval for the role: " + requestedRole +
+                " within partner organization: " + targetPartner.getPartnerName() +
+                " at center: " + targetCenter.getCenterName() +
+                " at location: " + targetCenter.getLocation();
+
+        // Send notification to all suitable Partners in that Organisation
+        for (User suitableApprover : potentialApprovers) {
+            notificationService.sendApprovalNotification(suitableApprover, roleRequested, title, message);
+        }
+
+        return "Your Request was successfully sent!";
     }
 
-    public String requestRole(UUID userId, RoleRequestDTO request) {
-        // Double check if id is not null
-        if (userId == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
+    // Approving a Role Request and Updating all related tables
+    public String approveRoleRequest(UUID requestId, UUID approverId) {
+
+        User approver = userRepo.findById(approverId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        RoleRequest request = roleRequestRepo.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+        if(!request.getStatus().equals(RequestStatus.PENDING)){
+            throw new ResourceAlreadyExistsException("Request already processed!");
         }
 
-        // Check if user requesting role exists
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        //Updating request Status
+        changeRequestStatus(request, approver, RequestStatus.APPROVED, null);
 
-        if (user.getRole() != Role.UNASSIGNED) {
-            throw new RuntimeException("User already has a role assigned.");
+        //Update User Role, Partner (Organisation) and Center(Location)
+        User requester = assignRoleToRequester(request);
+
+        // Mark notification as processed by turning is_read to true
+        notificationService.markNotificationAsRead(requestId);
+
+        // Notify requester
+        String title = "Role Request Approved";
+        String message = "Your request for role '" + request.getRequestedRole() + "' has been approved.";
+
+        notificationService.sendInfoNotification(requester, title, message, Priority.LOW);
+
+        return "Request was successfully approved.";
+    }
+
+    // Rejecting a Role Request and notifying the requester
+    public String rejectRoleRequest(UUID requestId, UUID approverId, String comment) {
+
+        User approver = userRepo.findById(approverId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        RoleRequest request = roleRequestRepo.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+        if(!request.getStatus().equals(RequestStatus.PENDING)){
+            throw new ResourceAlreadyExistsException("Request already processed!");
         }
 
-        System.out.println("ParterId: "+ request.getPartnerId());
-        System.out.println("Role: "+ request.getRequestedRole());
+        //Updating request Status
+        changeRequestStatus(request, approver, RequestStatus.REJECTED, comment);
 
-        // Check if the Partner (Organisation) a user belongs to exists
-        Partner partner = partnerRepo.findById(request.getPartnerId())
-                .orElseThrow(() -> new RuntimeException("Partner does not exist"));
+        // Notify requester
+        String title = "Role Request Rejected";
+        String message = "Your request for role '" + request.getRequestedRole() + "' has been rejected. Reason: " + comment;
 
-        System.out.println("Partner: " + partner.getPartnerName());
+        notificationService.sendInfoNotification(request.getRequester(), title, message, Priority.HIGH);
 
-        System.out.println("Reached here!");
-        // Business rules
-        Role requested = Role.valueOf(request.getRequestedRole());
-        System.out.println("Role requested: " + requested);
+        return "Request was successfully rejected.";
+    }
 
-        // Count ME officers
-        long meCount = partner.getUsers().stream()
-                .filter(officer -> officer.getRole() == Role.ME_OFFICER)
-                .count();
-        System.out.println("MeCount: " + meCount);
+    //Changing the Request Status from pending to Approved or Rejected depending on Admins decision
+    private void changeRequestStatus(RoleRequest request, User approver, RequestStatus status, @Null String comment) {
+        request.setStatus(status);
+        request.setApprovedBy(approver);
+        request.setApprovedAt(Instant.now());
+        request.setAdminComment(comment);
+        roleRequestRepo.save(request);
+    }
 
-        if (requested == Role.ME_OFFICER && meCount > 0) {
-            throw new RuntimeException("This partner already has an ME Officer");
+    //Updating the User record by adding role, partner and center information
+    private User assignRoleToRequester(RoleRequest request) {
+        User requester = request.getRequester();
+        requester.setRole(request.getRequestedRole());
+        requester.setPartner(request.getPartner());
+        requester.setCenter(request.getCenter());
+        userRepo.save(requester);
+        return requester;
+    }
+
+    // Saving the requested role to the role_request table
+    private RoleRequest saveRoleRequest(User requester, Partner targetPartner, Center targetCenter, Role requestedRole) {
+        RoleRequest roleRequest = new RoleRequest();
+
+        roleRequest.setRequester(requester);
+        roleRequest.setPartner(targetPartner);
+        roleRequest.setCenter(targetCenter);
+        roleRequest.setRequestedRole(requestedRole);
+        roleRequest.setStatus(RequestStatus.PENDING);
+
+        return roleRequestRepo.save(roleRequest);
+    }
+
+    // Getting a list of potential Approvers
+    private List<User> requestApprovers(Role approverRole, Partner targetPartner, Center targetCenter,  Role roleRequest) {
+
+        if(roleRequest != Role.FACILITATOR) {
+            return userRepo.findAll().stream()
+                    .filter(user -> user.getRole() == approverRole)
+                    .toList();
         }
 
-        if (requested == Role.FACILITATOR && meCount == 0) {
-            throw new RuntimeException("Cannot be a facilitator: Partner has no ME Officer");
-        }
-
-        // Assign role
-        System.out.println("Assigning role");
-        user.setPartner(partner);
-        user.setRole(requested);
-        userRepo.save(user);
-
-        return user.getEmail() + " is now assigned as " + requested;
+        return userRepo.findAll().stream()
+                .filter(user -> user.getRole() == approverRole && user.getPartner() == targetPartner && user.getCenter() == targetCenter)
+                .toList();
     }
 }
