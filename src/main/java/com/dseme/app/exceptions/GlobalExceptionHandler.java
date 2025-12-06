@@ -18,6 +18,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(resourceAlreadyExists.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(value={ResourceNotFoundException.class})
+    public ResponseEntity<String> handleResourceNotFoundException (ResourceNotFoundException resourceNotFound){
+        return new ResponseEntity<>(resourceNotFound.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(value={MethodArgumentNotValidException.class})
     public Map<String,String> handleValidationExceptions (MethodArgumentNotValidException ex){

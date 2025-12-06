@@ -1,4 +1,4 @@
-package com.dseme.app.models;
+package com.dseme.app.enums;
 
 public enum Role {
     PARTNER,            //MasterCard

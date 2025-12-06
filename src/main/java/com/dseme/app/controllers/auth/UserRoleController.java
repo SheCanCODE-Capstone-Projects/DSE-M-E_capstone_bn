@@ -18,8 +18,24 @@ public class UserRoleController {
     }
 
     @PostMapping("/assign-role/{id}")
-    public String assignRole(@PathVariable UUID id,@Valid @RequestBody RoleRequestDTO request) {
-        return userRoleService.requestRole(id, request);
+    public String assignRole(@PathVariable UUID id,@Valid @RequestBody UUID request) {
+        return userRoleService.approveRoleRequest(id,  request);
     }
+
+    @PostMapping("/request-approval/{id}")
+    public String requestApproval(@PathVariable UUID id,@Valid @RequestBody RoleRequestDTO request) {
+        return userRoleService.requestRoleApproval(id, request);
+    }
+
+    @PostMapping("request/approve/{requestId}")
+    public String approveRequest( @PathVariable UUID requestId, @RequestParam UUID approverId) {
+        return userRoleService.approveRoleRequest(requestId, approverId);
+    }
+
+    @PostMapping("request/reject/{requestId}")
+    public String rejectRequest( @PathVariable UUID requestId, @RequestParam UUID approverId, @RequestBody String comment) {
+        return userRoleService.rejectRoleRequest(requestId, approverId, comment);
+    }
+
 }
 
