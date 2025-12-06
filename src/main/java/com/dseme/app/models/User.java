@@ -2,22 +2,19 @@ package com.dseme.app.models;
 
 import com.dseme.app.enums.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Builder
 @Getter
 @Setter
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "users")
+
 public class User{
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,7 +34,7 @@ public class User{
     private String lastName;
 
     @Column(name = "is_active")
-    private Boolean isActive;
+    private Boolean isActive =true;
 
     @Column(name = "created_at")
     private Instant createdAt;
@@ -52,11 +49,6 @@ public class User{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "partner_id")
     private Partner partner;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "center_id")
-    private Center center;
 
     @PrePersist
     protected void onCreate() {
