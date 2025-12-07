@@ -1,4 +1,4 @@
-package com.dseme.app.dtos.auth;
+package com.dseme.app.dtos.users;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

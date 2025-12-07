@@ -7,7 +7,7 @@ import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.enums.Role;
 import com.dseme.app.models.User;
 import com.dseme.app.repositories.UserRepository;
-import com.dseme.app.utilies.JwtUtil;
+import com.dseme.app.utilities.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

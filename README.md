@@ -66,12 +66,15 @@ src/
             ├── repositories/             # JPA repositories
             ├── models/                   # Entities
             ├── configurations/           # Security & global config
+            ├── enums/                    # Enums
             ├── dtos/                     # DTOs
             ├── exceptions/               # Global & Custom Exceptions
             ├── filters/                  # Filters (Jwt Filter and Others)
+            ├── utilities/                # Utilities
             └── App                       # The main spring class
     └── resources/
-        ├── application.yaml          # The main configuration file
+        ├── db.migration                  # The migration files
+        ├── application.yaml              # The main configuration file
         └── static/...
 
 ## Key Modules
@@ -167,7 +170,7 @@ Endpoint	                                      Method	            Description
 /api/users/request/role	                          POST	                Request Role
 /api/users/request/approve/{requestId}            POST	                Approve Request Role
 /api/users/request/reject/{requestId}             POST	                Reject Request Role
-/api/notifications/{id}                           POST	                Get notifications by user id
+/api/notifications/{id}                           GET	                Get notifications by user id
 
 /api/partners	                                  POST	                Create partner
 /api/users/assign-role/{id}	                      POST	                Assigning roles to each new users

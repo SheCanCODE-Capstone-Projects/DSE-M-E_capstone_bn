@@ -9,13 +9,12 @@ import com.dseme.app.models.RoleRequest;
 import com.dseme.app.models.User;
 import com.dseme.app.repositories.NotificationRepository;
 import com.dseme.app.repositories.UserRepository;
-import com.dseme.app.utilies.JwtUtil;
+import com.dseme.app.utilities.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
