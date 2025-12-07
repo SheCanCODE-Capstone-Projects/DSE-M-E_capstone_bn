@@ -1,7 +1,7 @@
 package com.dseme.app.services.auth;
 
 import com.dseme.app.dtos.auth.LoginDTO;
-import com.dseme.app.dtos.auth.SignUpDTO;
+import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.exceptions.AccountInactiveException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.enums.Role;
@@ -33,16 +33,16 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    public String signUp(SignUpDTO signUpDTO) {
-        if (userRepo.existsByEmail(signUpDTO.getEmail())) {
+    public String register(RegisterDTO registerDTO) {
+        if (userRepo.existsByEmail(registerDTO.getEmail())) {
             throw new ResourceAlreadyExistsException(
-                    "User with email '" + signUpDTO.getEmail() + "' already exists!"
+                    "User with email '" + registerDTO.getEmail() + "' already exists!"
             );
         }
 
         User user = new User();
-        user.setEmail(signUpDTO.getEmail());
-        user.setPasswordHash(encoder.encode(signUpDTO.getPassword()));
+        user.setEmail(registerDTO.getEmail());
+        user.setPasswordHash(encoder.encode(registerDTO.getPassword()));
         user.setRole(Role.UNASSIGNED);
         user.setIsActive(true);
 
@@ -71,7 +71,6 @@ public class AuthService {
                         loginDTO.getPassword()
                 )
         );
-
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         return jwtUtil.generateToken(userDetails.getUsername());

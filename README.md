@@ -161,17 +161,22 @@ docker-compose up	            Run system with Docker (if enabled)
 
 Examples:
 
-Endpoint	                    Method	                Description
-/api/auth/signup	            POST	                Register
-/api/auth/signin	            POST	                Login
-/api/partners	                POST	                Create partner
-/api/users/assign-role/{id}	    POST	                Assigning roles to each new users
-/api/users	                    POST	                Create facilitator/mentor
-/api/participants	            POST	                Create/update profile
-/api/enrollment	                POST	                Enroll in cohort
-/api/attendance	                POST	                Record attendance
-/api/dashboard/donor	        GET	                    Donor analytics
-/api/reports/export	            GET	                    Download CSV/PDF
+Endpoint	                                      Method	            Description
+/api/auth/register	                              POST	                Register
+/api/auth/login	                                  POST	                Login
+/api/users/request/role	                          POST	                Request Role
+/api/users/request/approve/{requestId}            POST	                Approve Request Role
+/api/users/request/reject/{requestId}             POST	                Reject Request Role
+/api/notifications/{id}                           POST	                Get notifications by user id
+
+/api/partners	                                  POST	                Create partner
+/api/users/assign-role/{id}	                      POST	                Assigning roles to each new users
+/api/users	                                      POST	                Create facilitator/mentor
+/api/participants	                              POST	                Create/update profile
+/api/enrollment	                                  POST	                Enroll in cohort
+/api/attendance	                                  POST	                Record attendance
+/api/dashboard/donor	                          GET	                Donor analytics
+/api/reports/export	                              GET	                Download CSV/PDF
 
 ## Dashboards
 

@@ -7,6 +7,8 @@ import com.dseme.app.models.Notification;
 import com.dseme.app.models.RoleRequest;
 import com.dseme.app.models.User;
 import com.dseme.app.repositories.*;
+import com.dseme.app.services.users.UserPermissionService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,14 +22,25 @@ import java.util.stream.Collectors;
 public class NotificationService {
     private final NotificationRepository notificationRepo;
     private final UserRepository userRepo;
+    private final UserPermissionService userPermissionService;
 
-    public NotificationService(NotificationRepository notificationRepo, UserRepository userRepo) {
+    public NotificationService(NotificationRepository notificationRepo, UserRepository userRepo,  UserPermissionService userPermissionService) {
         this.notificationRepo = notificationRepo;
         this.userRepo = userRepo;
+        this.userPermissionService = userPermissionService;
     }
 
     // getting a list of notifications associated with a user
-    public List<NotificaticationDTO> getNotificationsById (User user){
+    public List<NotificaticationDTO> getNotificationsById (HttpServletRequest request){
+        User user = userPermissionService.getActor(request);
+
+        //Check if user and notification recipient are one and the same
+        userPermissionService.grantUserAccess(
+                user,
+                notificationRepo.findByRecipient(user).getRecipient().getId(),
+                "You are not allowed to approve or reject this request"
+        );
+
         return notificationRepo.findAll()
                 .stream()
                 .filter(notify -> notify.getRecipient().equals(user) && notify.getIsRead().equals(false))

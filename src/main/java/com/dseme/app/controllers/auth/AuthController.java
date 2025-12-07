@@ -1,7 +1,7 @@
 package com.dseme.app.controllers.auth;
 
 import com.dseme.app.dtos.auth.LoginDTO;
-import com.dseme.app.dtos.auth.SignUpDTO;
+import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.services.auth.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +16,9 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/signup")
-    public String signUp(@Valid @RequestBody SignUpDTO signUpDTO) {
-        return authService.signUp(signUpDTO);
+    @PostMapping("/register")
+    public String register(@Valid @RequestBody RegisterDTO registerDTO) {
+        return authService.register(registerDTO);
     }
 
     @PostMapping("/login")
@@ -28,6 +28,7 @@ public class AuthController {
 
     @GetMapping ("/test")
     public String test() {
+        System.out.println("test starting");
         return "test";
     }
 }

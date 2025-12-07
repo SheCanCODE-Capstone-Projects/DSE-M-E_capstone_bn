@@ -1,6 +1,8 @@
 package com.dseme.app.repositories;
 
 import com.dseme.app.models.Notification;
+import com.dseme.app.models.RoleRequest;
+import com.dseme.app.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -10,4 +12,7 @@ import java.util.UUID;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     List<Notification> findByRoleRequestId(UUID roleRequestId);
 
+    Optional<Notification> findByRoleRequestAndAndRecipient(RoleRequest roleRequest, User recipient);
+
+    Notification findByRecipient(User recipient);
 }
