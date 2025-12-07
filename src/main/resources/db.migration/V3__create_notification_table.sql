@@ -7,7 +7,7 @@ create table notifications
     message           text         not null,
     is_read           boolean      default false,
     priority          varchar(255) default 'HIGH',
-    created_at        timestamp    not null
+    created_at        timestamp    not null default now()
 );
 
 ALTER TABLE notifications

@@ -1,4 +1,4 @@
-package com.dseme.app.utilies;
+package com.dseme.app.utilities;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

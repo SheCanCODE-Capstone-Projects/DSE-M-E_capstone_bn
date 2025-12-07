@@ -1,6 +1,6 @@
 package com.dseme.app.services.notifications;
 
-import com.dseme.app.dtos.notifications.NotificaticationDTO;
+import com.dseme.app.dtos.notifications.NotificationDTO;
 import com.dseme.app.enums.NotificationType;
 import com.dseme.app.enums.Priority;
 import com.dseme.app.models.Notification;
@@ -31,7 +31,7 @@ public class NotificationService {
     }
 
     // getting a list of notifications associated with a user
-    public List<NotificaticationDTO> getNotificationsById (HttpServletRequest request){
+    public List<NotificationDTO> getNotificationsById (HttpServletRequest request){
         User user = userPermissionService.getActor(request);
 
         //Check if user and notification recipient are one and the same
@@ -45,7 +45,7 @@ public class NotificationService {
                 .stream()
                 .filter(notify -> notify.getRecipient().equals(user) && notify.getIsRead().equals(false))
                 .map(notification ->
-                        new NotificaticationDTO(
+                        new NotificationDTO(
                                 user.getEmail(),
                                 notification.getNotificationType().toString(),
                                 notification.getTitle(),

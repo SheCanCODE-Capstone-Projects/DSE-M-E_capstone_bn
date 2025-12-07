@@ -47,4 +47,5 @@ ALTER TABLE role_requests
 ADD CONSTRAINT unique_role_request
     UNIQUE (requester_id, requested_role, partner_id, center_id);
 
-
+ALTER TABLE role_requests
+  ALTER COLUMN partner_id TYPE TEXT;

@@ -1,6 +1,6 @@
 package com.dseme.app.services.users;
 
-import com.dseme.app.dtos.auth.RoleRequestDTO;
+import com.dseme.app.dtos.users.RoleRequestDTO;
 import com.dseme.app.enums.Priority;
 import com.dseme.app.enums.RequestStatus;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
@@ -57,7 +57,12 @@ public class UserRoleService {
         Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(roleRequestDTO.getCenterId(), targetPartner.getPartnerId())
                 .orElseThrow(() -> new ResourceNotFoundException("This Center Location is does not belong to " + targetPartner.getPartnerName()));
 
-        Role requestedRole = Role.valueOf(roleRequestDTO.getRequestedRole());
+        Role requestedRole;
+        try {
+                requestedRole = Role.valueOf(roleRequestDTO.getRequestedRole());
+            } catch (IllegalArgumentException e) {
+                throw new ResourceNotFoundException("Invalid role: " + roleRequestDTO.getRequestedRole());
+            }
 
         boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterId(requester.getId(), requestedRole, targetPartner.getPartnerId(), targetCenter.getId());
 
@@ -196,7 +201,8 @@ public class UserRoleService {
         }
 
         return userRepo.findAll().stream()
-                .filter(user -> user.getRole() == approverRole && user.getPartner() == targetPartner && user.getCenter() == targetCenter)
-                .toList();
+                .filter(user -> user.getRole() == approverRole
+                        && user.getPartner() != null && user.getPartner().getPartnerId().equals(targetPartner.getPartnerId())
+                        && user.getCenter() != null && user.getCenter().getId().equals(targetCenter.getId()))                .toList();
     }
 }
