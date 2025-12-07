@@ -1,4 +1,4 @@
-package com.dseme.app.services.auth;
+package com.dseme.app.services.users;
 
 import com.dseme.app.dtos.auth.RoleRequestDTO;
 import com.dseme.app.enums.Priority;
@@ -9,6 +9,7 @@ import com.dseme.app.models.*;
 import com.dseme.app.enums.Role;
 import com.dseme.app.repositories.*;
 import com.dseme.app.services.notifications.NotificationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Null;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,33 +27,37 @@ public class UserRoleService {
     private final CenterRepository centerRepo;
     private final RoleRequestRepository roleRequestRepo;
     private final NotificationService notificationService;
+    private final UserPermissionService userPermissionService;
 
     public UserRoleService(UserRepository userRepo,
                            PartnerRepository partnerRepo,
                            NotificationService notificationService,
                            CenterRepository centerRepo,
-                           RoleRequestRepository roleRequestRepo) {
+                           RoleRequestRepository roleRequestRepo,
+                           UserPermissionService userPermissionService) {
         this.userRepo = userRepo;
         this.partnerRepo = partnerRepo;
         this.notificationService = notificationService;
         this.centerRepo = centerRepo;
         this.roleRequestRepo = roleRequestRepo;
+        this.userPermissionService = userPermissionService;
     }
-    
 
     // Request Role and Permissions from suitable Admins
-    public String requestRoleApproval(UUID userId, RoleRequestDTO request){
+    public String requestRoleApproval(HttpServletRequest actor, RoleRequestDTO roleRequestDTO){
 
-        User requester = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User requester = userPermissionService.getActor(actor);
 
-        Partner targetPartner = partnerRepo.findById(request.getPartnerId())
+        // Check if they don't have an already assigned role
+        userPermissionService.allowedToRequestRole(requester);
+
+        Partner targetPartner = partnerRepo.findById(roleRequestDTO.getPartnerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Partner does not exist"));
 
-        Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(request.getCenterId(), targetPartner.getPartnerId())
+        Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(roleRequestDTO.getCenterId(), targetPartner.getPartnerId())
                 .orElseThrow(() -> new ResourceNotFoundException("This Center Location is does not belong to " + targetPartner.getPartnerName()));
 
-        Role requestedRole = Role.valueOf(request.getRequestedRole());
+        Role requestedRole = Role.valueOf(roleRequestDTO.getRequestedRole());
 
         boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterId(requester.getId(), requestedRole, targetPartner.getPartnerId(), targetCenter.getId());
 
@@ -91,20 +96,20 @@ public class UserRoleService {
     }
 
     // Approving a Role Request and Updating all related tables
-    public String approveRoleRequest(UUID requestId, UUID approverId) {
-
-        User approver = userRepo.findById(approverId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public String approveRoleRequest(HttpServletRequest actor,UUID requestId) {
 
         RoleRequest request = roleRequestRepo.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+        //Check if one is allowed to approve or reject a request
+        userPermissionService.approveOrRejectRequest(userPermissionService.getActor(actor), request);
 
         if(!request.getStatus().equals(RequestStatus.PENDING)){
             throw new ResourceAlreadyExistsException("Request already processed!");
         }
 
         //Updating request Status
-        changeRequestStatus(request, approver, RequestStatus.APPROVED, null);
+        changeRequestStatus(request, userPermissionService.getActor(actor), RequestStatus.APPROVED, null);
 
         //Update User Role, Partner (Organisation) and Center(Location)
         User requester = assignRoleToRequester(request);
@@ -122,20 +127,23 @@ public class UserRoleService {
     }
 
     // Rejecting a Role Request and notifying the requester
-    public String rejectRoleRequest(UUID requestId, UUID approverId, String comment) {
-
-        User approver = userRepo.findById(approverId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public String rejectRoleRequest(HttpServletRequest actor, UUID requestId, String comment) {
 
         RoleRequest request = roleRequestRepo.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+        //Check if one is allowed to approve or reject a request
+        userPermissionService.approveOrRejectRequest(userPermissionService.getActor(actor), request);
 
         if(!request.getStatus().equals(RequestStatus.PENDING)){
             throw new ResourceAlreadyExistsException("Request already processed!");
         }
 
         //Updating request Status
-        changeRequestStatus(request, approver, RequestStatus.REJECTED, comment);
+        changeRequestStatus(request, userPermissionService.getActor(actor), RequestStatus.REJECTED, comment);
+
+        // Mark notification as processed by turning is_read to true
+        notificationService.markNotificationAsRead(requestId);
 
         // Notify requester
         String title = "Role Request Rejected";

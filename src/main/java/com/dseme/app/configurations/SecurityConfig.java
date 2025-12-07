@@ -1,6 +1,6 @@
 package com.dseme.app.configurations;
 import com.dseme.app.filters.JwtAuthenticationFilter;
-import com.dseme.app.services.auth.UserDetailService;
+import com.dseme.app.services.users.UserDetailService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,7 +28,6 @@ public class SecurityConfig {
         this.authenticationJwtTokenFilter = authenticationJwtTokenFilter;
     }
 
-
     // Shared password encoder bean
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -48,12 +47,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.disable())
+                .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/health",
-                                "/api/auth/signup",
-                                "/api/auth/login/",
+                                "/api/auth/register",
+                                "/api/auth/login",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()

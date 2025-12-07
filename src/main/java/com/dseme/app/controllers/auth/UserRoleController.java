@@ -1,7 +1,8 @@
 package com.dseme.app.controllers.auth;
 
 import com.dseme.app.dtos.auth.RoleRequestDTO;
-import com.dseme.app.services.auth.UserRoleService;
+import com.dseme.app.services.users.UserRoleService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,24 +18,19 @@ public class UserRoleController {
         this.userRoleService = userRoleService;
     }
 
-    @PostMapping("/assign-role/{id}")
-    public String assignRole(@PathVariable UUID id,@Valid @RequestBody UUID request) {
-        return userRoleService.approveRoleRequest(id,  request);
-    }
-
-    @PostMapping("/request-approval/{id}")
-    public String requestApproval(@PathVariable UUID id,@Valid @RequestBody RoleRequestDTO request) {
-        return userRoleService.requestRoleApproval(id, request);
+    @PostMapping("/request/role")
+    public String requestApproval(HttpServletRequest actor, @Valid @RequestBody RoleRequestDTO roleRequestDTO) {
+        return userRoleService.requestRoleApproval(actor, roleRequestDTO);
     }
 
     @PostMapping("request/approve/{requestId}")
-    public String approveRequest( @PathVariable UUID requestId, @RequestParam UUID approverId) {
-        return userRoleService.approveRoleRequest(requestId, approverId);
+    public String approveRequest( HttpServletRequest actor, @PathVariable UUID requestId) {
+        return userRoleService.approveRoleRequest(actor, requestId);
     }
 
     @PostMapping("request/reject/{requestId}")
-    public String rejectRequest( @PathVariable UUID requestId, @RequestParam UUID approverId, @RequestBody String comment) {
-        return userRoleService.rejectRoleRequest(requestId, approverId, comment);
+    public String rejectRequest( HttpServletRequest actor,@PathVariable UUID requestId, @RequestBody String comment) {
+        return userRoleService.rejectRoleRequest(actor, requestId, comment);
     }
 
 }
