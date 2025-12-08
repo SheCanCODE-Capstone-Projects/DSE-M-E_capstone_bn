@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     List<Notification> findByRoleRequestId(UUID roleRequestId);
 
-    Optional<Notification> findByRoleRequestAndAndRecipient(RoleRequest roleRequest, User recipient);
+    Optional<Notification> findByRoleRequestAndRecipient(RoleRequest roleRequest, User recipient);
 
-    Notification findByRecipient(User recipient);
+    List<Notification> findByRecipient(User recipient);
 }

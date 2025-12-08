@@ -124,7 +124,7 @@ src/
     spring.datasource.password=your_password
 
     jwt.secret=your_jwt_secret
-    server.port=8080
+    server.port=8088
 
 - 4. Install dependencies
    mvn clean install
@@ -170,7 +170,7 @@ Endpoint	                                      Method	            Description
 /api/users/request/role	                          POST	                Request Role
 /api/users/request/approve/{requestId}            POST	                Approve Request Role
 /api/users/request/reject/{requestId}             POST	                Reject Request Role
-/api/notifications/{id}                           GET	                Get notifications by user id
+/api/notifications                                GET	                Get notifications by user id
 
 /api/partners	                                  POST	                Create partner
 /api/users/assign-role/{id}	                      POST	                Assigning roles to each new users
