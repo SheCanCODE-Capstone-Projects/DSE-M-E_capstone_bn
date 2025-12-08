@@ -36,7 +36,7 @@ public class User{
     private String lastName;
 
     @Column(name = "is_active")
-    private Boolean isActive =true;
+    private Boolean isActive;
 
     @Column(name = "created_at")
     private Instant createdAt;
