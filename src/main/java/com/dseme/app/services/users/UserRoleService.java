@@ -10,7 +10,7 @@ import com.dseme.app.enums.Role;
 import com.dseme.app.repositories.*;
 import com.dseme.app.services.notifications.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.constraints.Null;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -160,7 +160,7 @@ public class UserRoleService {
     }
 
     //Changing the Request Status from pending to Approved or Rejected depending on Admins decision
-    private void changeRequestStatus(RoleRequest request, User approver, RequestStatus status, @Null String comment) {
+    private void changeRequestStatus(RoleRequest request, User approver, RequestStatus status, @Nullable String comment) {
         request.setStatus(status);
         request.setApprovedBy(approver);
         request.setApprovedAt(Instant.now());

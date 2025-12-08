@@ -34,16 +34,10 @@ public class NotificationService {
     public List<NotificationDTO> getNotificationsById (HttpServletRequest request){
         User user = userPermissionService.getActor(request);
 
-        //Check if user and notification recipient are one and the same
-        userPermissionService.grantUserAccess(
-                user,
-                notificationRepo.findByRecipient(user).getRecipient().getId(),
-                "You are not allowed to approve or reject this request"
-        );
-
-        return notificationRepo.findAll()
+        //Check if user and notification recipient are one and the same and load the notification
+        return notificationRepo.findByRecipient(user)
                 .stream()
-                .filter(notify -> notify.getRecipient().equals(user) && notify.getIsRead().equals(false))
+                .filter(notify -> Boolean.FALSE.equals(notify.getIsRead()))
                 .map(notification ->
                         new NotificationDTO(
                                 user.getEmail(),

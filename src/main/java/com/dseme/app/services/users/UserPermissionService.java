@@ -43,7 +43,7 @@ public class UserPermissionService {
 
     public void approveOrRejectRequest(User approver, RoleRequest request) {
 
-        Notification notification = notificationRepo.findByRoleRequestAndAndRecipient(request, approver)
+        Notification notification = notificationRepo.findByRoleRequestAndRecipient(request, approver)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
 
 
@@ -51,8 +51,21 @@ public class UserPermissionService {
             throw new AccessDeniedException("You are not allowed to approve or reject this request");
         }
 
+        // Check if no user is trying to approve their own request
         grantUserAccess(approver, notification.getRecipient().getId(), "You are not allowed to approve or reject this request");
 
+        // Validate approver has authority over the request's scope
+        if (request.getRequestedRole() == Role.FACILITATOR) {
+            // Verify approver is ME_OFFICER or PARTNER for the same center
+            if (!approver.getCenter().equals(request.getCenter())) {
+                throw new AccessDeniedException("You are not authorized to approve requests for this center");
+            }
+        } else {
+            // Verify approver is PARTNER for the same partner organization
+            if (!approver.getPartner().equals(request.getPartner())) {
+                throw new AccessDeniedException("You are not authorized to approve requests for this partner");
+            }
+        }
     }
 
     public void allowedToRequestRole(User requester){
