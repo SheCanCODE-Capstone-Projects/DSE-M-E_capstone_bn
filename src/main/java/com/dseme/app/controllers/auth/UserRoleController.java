@@ -1,7 +1,9 @@
 package com.dseme.app.controllers.auth;
 
-import com.dseme.app.dtos.auth.RoleRequestDTO;
-import com.dseme.app.services.auth.UserRoleService;
+import com.dseme.app.dtos.users.RejectRequestDTO;
+import com.dseme.app.dtos.users.RoleRequestDTO;
+import com.dseme.app.services.users.UserRoleService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +19,20 @@ public class UserRoleController {
         this.userRoleService = userRoleService;
     }
 
-    @PostMapping("/assign-role/{id}")
-    public String assignRole(@PathVariable UUID id,@Valid @RequestBody RoleRequestDTO request) {
-        return userRoleService.requestRole(id, request);
+    @PostMapping("/request/role")
+    public String requestApproval(HttpServletRequest actor, @Valid @RequestBody RoleRequestDTO roleRequestDTO) {
+        return userRoleService.requestRoleApproval(actor, roleRequestDTO);
     }
+
+    @PostMapping("/request/approve/{requestId}")
+    public String approveRequest( HttpServletRequest actor, @PathVariable UUID requestId) {
+        return userRoleService.approveRoleRequest(actor, requestId);
+    }
+
+    @PostMapping("/request/reject/{requestId}")
+    public String rejectRequest(HttpServletRequest actor, @PathVariable UUID requestId, @Valid @RequestBody RejectRequestDTO rejectRequestDTO) {
+        return userRoleService.rejectRoleRequest(actor, requestId, rejectRequestDTO.getComment());
+    }
+
 }
 
