@@ -1,4 +1,4 @@
-package com.dseme.app.utilies;
+package com.dseme.app.utilities;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -23,7 +23,6 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        System.out.println("JWT secret loaded: " + jwtSecret);
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -57,7 +56,6 @@ public class JwtUtil {
             return false;
         }
     }
-
 
     // Added for compatibility with filter/controller
     public String extractUsername(String token) {

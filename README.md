@@ -66,12 +66,15 @@ src/
             ├── repositories/             # JPA repositories
             ├── models/                   # Entities
             ├── configurations/           # Security & global config
+            ├── enums/                    # Enums
             ├── dtos/                     # DTOs
             ├── exceptions/               # Global & Custom Exceptions
             ├── filters/                  # Filters (Jwt Filter and Others)
+            ├── utilities/                # Utilities
             └── App                       # The main spring class
     └── resources/
-        ├── application.yaml          # The main configuration file
+        ├── db.migration                  # The migration files
+        ├── application.yaml              # The main configuration file
         └── static/...
 
 ## Key Modules
@@ -121,7 +124,7 @@ src/
     spring.datasource.password=your_password
 
     jwt.secret=your_jwt_secret
-    server.port=8080
+    server.port=8088
 
 - 4. Install dependencies
    mvn clean install
@@ -161,17 +164,22 @@ docker-compose up	            Run system with Docker (if enabled)
 
 Examples:
 
-Endpoint	                    Method	                Description
-/api/auth/signup	            POST	                Register
-/api/auth/signin	            POST	                Login
-/api/partners	                POST	                Create partner
-/api/users/assign-role/{id}	    POST	                Assigning roles to each new users
-/api/users	                    POST	                Create facilitator/mentor
-/api/participants	            POST	                Create/update profile
-/api/enrollment	                POST	                Enroll in cohort
-/api/attendance	                POST	                Record attendance
-/api/dashboard/donor	        GET	                    Donor analytics
-/api/reports/export	            GET	                    Download CSV/PDF
+Endpoint	                                      Method	            Description
+/api/auth/register	                              POST	                Register
+/api/auth/login	                                  POST	                Login
+/api/users/request/role	                          POST	                Request Role
+/api/users/request/approve/{requestId}            POST	                Approve Request Role
+/api/users/request/reject/{requestId}             POST	                Reject Request Role
+/api/notifications                                GET	                Get notifications by user id
+
+/api/partners	                                  POST	                Create partner
+/api/users/assign-role/{id}	                      POST	                Assigning roles to each new users
+/api/users	                                      POST	                Create facilitator/mentor
+/api/participants	                              POST	                Create/update profile
+/api/enrollment	                                  POST	                Enroll in cohort
+/api/attendance	                                  POST	                Record attendance
+/api/dashboard/donor	                          GET	                Donor analytics
+/api/reports/export	                              GET	                Download CSV/PDF
 
 ## Dashboards
 

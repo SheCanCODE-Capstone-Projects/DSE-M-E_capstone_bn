@@ -1,4 +1,4 @@
-package com.dseme.app.services.auth;
+package com.dseme.app.services.users;
 
 import com.dseme.app.models.User;
 import com.dseme.app.repositories.UserRepository;
@@ -8,7 +8,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 
 @Service
