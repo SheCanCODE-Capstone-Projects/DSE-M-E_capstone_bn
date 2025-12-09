@@ -1,23 +1,25 @@
 spring:
-  application:
-    name: dse-backend
   profiles:
     active: dev
----
-spring:
-  config:
-    activate:
-      on-profile: dev
 
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-#  jpa:
-#    hibernate:
-#      ddl-auto: none
-#    show-sql: false
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 
   security:
     user:
@@ -25,15 +27,11 @@ spring:
       password: ${SECURITY_USER_PASSWORD:newuser123}
       roles: ${SECURITY_USER_ROLES:ROLE_UNASSIGNED}
 
+  flyway:
+    enabled: false
+
 jwt:
   secret: ${JWT_SECRET}
 
-server:
-  port: 8088
----
-spring:
-  config:
-    activate:
-      on-profile: prod
 server:
   port: 8088
