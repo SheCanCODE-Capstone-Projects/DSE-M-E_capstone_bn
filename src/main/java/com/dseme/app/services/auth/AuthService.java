@@ -20,7 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Service
 public class AuthService {
@@ -32,7 +32,7 @@ public class AuthService {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     // Add this line:
-    private final Random random = new Random(); // <-- FIX
+    private final SecureRandom random = new SecureRandom();
 
     public AuthService(UserRepository userRepo,
                        AuthenticationManager authenticationManager,
