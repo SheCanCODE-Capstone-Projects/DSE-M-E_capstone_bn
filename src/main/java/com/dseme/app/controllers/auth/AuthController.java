@@ -47,15 +47,4 @@ public class AuthController {
         return authService.resetPassword(dto);
     }
 
-    @GetMapping("/test")
-    public String test() {
-        System.out.println("test starting");
-        return "test";
-    }
-
-    @GetMapping("/test-email")
-    public String testEmail() {
-        emailService.sendPasswordResetEmail("mushimiyimanaesther091@gmail.com", "test-token-123");
-        return "Test email sent!";
-    }
 }
