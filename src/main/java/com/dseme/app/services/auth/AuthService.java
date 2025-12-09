@@ -91,10 +91,10 @@ public class AuthService {
     // --- Forgot password ---
     public String forgotPassword(ForgotPasswordDTO dto) {
         User user = userRepo.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("If an account with this email exists, a reset code has been sent"));
 
         // Generate 6-digit numeric token
-        String token = String.format("%06d", random.nextInt(999999));
+        String token = String.format("%06d", random.nextInt(1_000_000));
 
         user.setResetToken(token);
         user.setResetTokenExpiry(Instant.now().plusSeconds(120)); // 2 minutes expiry
