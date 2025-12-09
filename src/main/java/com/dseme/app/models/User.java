@@ -56,6 +56,12 @@ public class User{
     @JoinColumn(name = "center_id")
     private Center center;
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private Instant resetTokenExpiry;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();

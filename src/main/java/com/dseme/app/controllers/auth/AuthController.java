@@ -1,8 +1,11 @@
 package com.dseme.app.controllers.auth;
 
+import com.dseme.app.dtos.auth.ForgotPasswordDTO;
 import com.dseme.app.dtos.auth.LoginDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
+import com.dseme.app.dtos.auth.ResetPasswordDTO;
 import com.dseme.app.services.auth.AuthService;
+import com.dseme.app.services.auth.EmailService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,9 +14,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailService emailService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, EmailService emailService) {
         this.authService = authService;
+        this.emailService = emailService;
     }
 
     @PostMapping("/register")
@@ -26,9 +31,31 @@ public class AuthController {
         return authService.login(loginDTO);
     }
 
-    @GetMapping ("/test")
+    @PostMapping("/forgot-password")
+    public String forgotPassword(@Valid @RequestBody ForgotPasswordDTO dto) {
+        return authService.forgotPassword(dto);
+    }
+
+    @GetMapping("/reset-password")
+    public String showResetPasswordPage(@RequestParam("token") String token) {
+        System.out.println("Token received: " + token);
+        return "Token received: " + token;
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        return authService.resetPassword(dto);
+    }
+
+    @GetMapping("/test")
     public String test() {
         System.out.println("test starting");
         return "test";
+    }
+
+    @GetMapping("/test-email")
+    public String testEmail() {
+        emailService.sendPasswordResetEmail("mushimiyimanaesther091@gmail.com", "test-token-123");
+        return "Test email sent!";
     }
 }
