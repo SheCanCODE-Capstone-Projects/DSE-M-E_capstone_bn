@@ -12,19 +12,19 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI api() {
+    public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("DSE M&E Platform API")
                         .version("1.0")
-                        .description("API for Monitoring & Evaluation Platform"))
-                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                        .description("Digital Skills for Employability Monitoring & Evaluation Platform API"))
+                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
                 .components(new Components()
-                        .addSecuritySchemes("bearerAuth",
+                        .addSecuritySchemes("Bearer Authentication", 
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                        ));
+                                        .description("Enter JWT token")));
     }
 }

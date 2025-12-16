@@ -49,3 +49,11 @@ ADD CONSTRAINT unique_role_request
 
 ALTER TABLE role_requests
   ALTER COLUMN partner_id TYPE TEXT;
+
+-- Add foreign key constraint from notifications to role_requests
+ALTER TABLE notifications
+    ADD CONSTRAINT notifications_role_request_fk
+        FOREIGN KEY (role_request_id)
+            REFERENCES role_requests(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE;

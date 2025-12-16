@@ -4,10 +4,15 @@ import com.dseme.app.dtos.auth.ForgotPasswordDTO;
 import com.dseme.app.dtos.auth.LoginDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.dtos.auth.ResetPasswordDTO;
+import com.dseme.app.enums.Role;
 import com.dseme.app.exceptions.AccountInactiveException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
-import com.dseme.app.enums.Role;
+import com.dseme.app.models.EmailVerificationToken;
+import com.dseme.app.models.Forgotpassword;
 import com.dseme.app.models.User;
+import com.dseme.app.repositories.EmailVerificationTokenRepository;
+import com.dseme.app.services.auth.EmailVerificationService;
+import com.dseme.app.repositories.ForgotPasswordRepository;
 import com.dseme.app.repositories.UserRepository;
 import com.dseme.app.utilities.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,109 +20,141 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepo;
+    private final ForgotPasswordRepository forgotPasswordRepo;
+    private final EmailVerificationTokenRepository tokenRepo;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private final EmailVerificationService emailVerificationService;
 
-    // Add this line:
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
     private final SecureRandom random = new SecureRandom();
 
-    public AuthService(UserRepository userRepo,
-                       AuthenticationManager authenticationManager,
-                       JwtUtil jwtUtil,
-                       EmailService emailService) {
+    public AuthService(
+            UserRepository userRepo,
+            ForgotPasswordRepository forgotPasswordRepo,
+            EmailVerificationTokenRepository tokenRepo,
+            AuthenticationManager authenticationManager,
+            JwtUtil jwtUtil,
+            EmailService emailService,
+            EmailVerificationService emailVerificationService
+    ) {
         this.userRepo = userRepo;
+        this.forgotPasswordRepo = forgotPasswordRepo;
+        this.tokenRepo = tokenRepo;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.emailService = emailService;
+        this.emailVerificationService = emailVerificationService;
     }
 
+    // ================= REGISTER =================
+    @Transactional
+    public String register(RegisterDTO dto) {
 
-    public String register(RegisterDTO registerDTO) {
-        if (userRepo.existsByEmail(registerDTO.getEmail())) {
+        if (userRepo.existsByEmail(dto.getEmail())) {
             throw new ResourceAlreadyExistsException(
-                    "User with email '" + registerDTO.getEmail() + "' already exists!"
+                    "User with email '" + dto.getEmail() + "' already exists"
             );
         }
 
         User user = new User();
-        user.setEmail(registerDTO.getEmail());
-        user.setPasswordHash(encoder.encode(registerDTO.getPassword()));
+        user.setEmail(dto.getEmail());
+        user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setRole(Role.UNASSIGNED);
-        user.setIsActive(true);
+        user.setIsActive(false);
+        user.setIsVerified(false);
 
-        userRepo.save(user);
+        User savedUser = userRepo.save(user);
+        
+        // Generate and send verification email
+        emailVerificationService.generateAndSendVerificationToken(savedUser);
 
-        return user.getEmail() + " has been successfully registered!";
+        return "Registration successful. Please check your email to verify your account.";
     }
 
-    public String login(LoginDTO loginDTO) {
-        User user = userRepo.findByEmail(loginDTO.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Invalid email or password"
-                ));
+    // ================= LOGIN =================
+    public String login(LoginDTO dto) {
 
-        if (user.getIsActive() == null || !user.getIsActive()) {
-            throw new AccountInactiveException("Your account is not active");
+        User user = userRepo.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+
+        if (!Boolean.TRUE.equals(user.getIsVerified())) {
+            throw new BadCredentialsException("Please verify your email first");
         }
 
-        if (!encoder.matches(loginDTO.getPassword(), user.getPasswordHash())) {
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new AccountInactiveException("Account is inactive");
+        }
+
+        if (!encoder.matches(dto.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginDTO.getEmail(),
-                        loginDTO.getPassword()
-                )
+        Authentication auth = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
         );
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
         return jwtUtil.generateToken(userDetails.getUsername());
     }
 
-    // --- Forgot password ---
+    // ================= FORGOT PASSWORD =================
+    @Transactional
     public String forgotPassword(ForgotPasswordDTO dto) {
-        User user = userRepo.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("If an account with this email exists, a reset code has been sent"));
 
-        // Generate 6-digit numeric token
-        String token = String.format("%06d", random.nextInt(1_000_000));
+        User user = userRepo.findByEmail(dto.getEmail()).orElse(null);
 
-        user.setResetToken(token);
-        user.setResetTokenExpiry(Instant.now().plusSeconds(120)); // 2 minutes expiry
-        userRepo.save(user);
+        if (user != null) {
+            forgotPasswordRepo.deleteByUser(user);
 
-        // Send email
-        emailService.sendPasswordResetEmail(user.getEmail(), token);
-        return "Password reset email sent";
+            int tokenInt = 100000 + random.nextInt(900000);
+            String token = String.valueOf(tokenInt);
+
+            Forgotpassword fp = new Forgotpassword();
+            fp.setToken(token);
+            fp.setUser(user);
+            fp.setExpirationTime(new Date(System.currentTimeMillis() + 2 * 60 * 1000));
+
+            forgotPasswordRepo.save(fp);
+            emailService.sendPasswordResetCode(user.getEmail(), token);
+        }
+
+        return "If an account exists, a reset code has been sent";
     }
 
-    // --- Reset password ---
+    // ================= RESET PASSWORD =================
+    @Transactional
     public String resetPassword(ResetPasswordDTO dto) {
-        User user = userRepo.findByResetToken(dto.getToken())
+
+        Forgotpassword fp = forgotPasswordRepo
+                .findByToken(dto.getToken())
                 .orElseThrow(() -> new BadCredentialsException("Invalid token"));
 
-        if (user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(Instant.now())) {
+        if (fp.getExpirationTime().before(new Date())) {
+            forgotPasswordRepo.delete(fp);
             throw new BadCredentialsException("Token expired");
         }
 
+        User user = fp.getUser();
         user.setPasswordHash(encoder.encode(dto.getNewPassword()));
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
         userRepo.save(user);
+
+        forgotPasswordRepo.delete(fp);
 
         return "Password reset successful";
     }
