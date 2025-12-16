@@ -3,9 +3,6 @@ package com.dseme.app.models;
 import com.dseme.app.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import java.time.Instant;
 import java.util.UUID;
 
@@ -35,14 +32,18 @@ public class User{
     @Column(name = "last_name")
     private String lastName;
 
+    @Builder.Default
     @Column(name = "is_active")
-    private Boolean isActive =true;
+    private Boolean isActive = false;
 
     @Column(name = "created_at")
     private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Forgotpassword forgotPassword;
 
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
@@ -55,6 +56,20 @@ public class User{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "center_id")
     private Center center;
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private Instant resetTokenExpiry;
+
+    @Column(name = "expiry_date")
+    private Instant expiryDate;
+
+
+    @Builder.Default
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
 
     @PrePersist
     protected void onCreate() {
