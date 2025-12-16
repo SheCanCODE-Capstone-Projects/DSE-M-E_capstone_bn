@@ -1,7 +1,0 @@
-services:
-  backend:
-    build: .
-    ports:
-      - "8080:8088"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev

@@ -48,9 +48,9 @@ public class UserPrincipal implements UserDetails {
         return true;
     }
 
-    // Optional: only enabled if user is active
     @Override
     public boolean isEnabled() {
-        return user.getIsActive() != null && user.getIsActive();
+        return user.getIsActive() != null && user.getIsActive()
+                && user.getIsVerified() != null && user.getIsVerified();
     }
 }
