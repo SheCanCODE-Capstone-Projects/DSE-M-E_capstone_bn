@@ -2,6 +2,7 @@ package com.dseme.app.services.auth;
 
 import com.dseme.app.dtos.auth.LoginDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
+import com.dseme.app.enums.Provider;
 import com.dseme.app.exceptions.AccountInactiveException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.enums.Role;
@@ -45,6 +46,7 @@ public class AuthService {
         user.setPasswordHash(encoder.encode(registerDTO.getPassword()));
         user.setRole(Role.UNASSIGNED);
         user.setIsActive(true);
+        user.setProvider(Provider.LOCAL);
 
         userRepo.save(user);
 
