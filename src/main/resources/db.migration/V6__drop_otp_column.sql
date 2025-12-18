@@ -1,0 +1,1 @@
+ALTER TABLE forgotpassword DROP COLUMN IF EXISTS otp;
