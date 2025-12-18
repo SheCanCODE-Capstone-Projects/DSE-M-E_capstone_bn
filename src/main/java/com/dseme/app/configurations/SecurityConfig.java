@@ -89,29 +89,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Get allowed origins from environment variable or use defaults
-        String allowedOriginsEnv = System.getenv("ALLOWED_ORIGINS");
-        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
-            // Production: use specific origins from environment
-            configuration.setAllowedOrigins(Arrays.asList(allowedOriginsEnv.split(",")));
-        } else {
-            // Development: allow all origins with patterns
-            configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        }
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:3000",
+            "https://dse-me-a86v.onrender.com"
+        ));
         
-        // Allow specific methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
         
-        // Allow specific headers (Authorization for JWT, Content-Type for JSON)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With"
+        ));
         
-        // Allow credentials for JWT authentication
-        configuration.setAllowCredentials(true);
-        
-        // Expose headers that frontend might need
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        
-        // Cache preflight response for 1 hour
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
