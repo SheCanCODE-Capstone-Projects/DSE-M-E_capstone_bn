@@ -23,6 +23,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import java.util.Arrays;
 
 @Configuration
@@ -47,6 +52,44 @@ public class SecurityConfig {
         provider.setUserDetailsService(userDetailService);
         provider.setPasswordEncoder(encoder);
         return provider;
+    }
+
+    /**
+     * Creates a ClientRegistrationRepository bean for OAuth2.
+     * Spring Boot will auto-configure this from application.yaml if properties are present.
+     * If not present, this creates an empty repository to prevent startup errors.
+     */
+    @Bean
+    public ClientRegistrationRepository clientRegistrationRepository(
+            org.springframework.core.env.Environment environment) {
+        String clientId = environment.getProperty("spring.oauth2.client.registration.google.client-id");
+        String clientSecret = environment.getProperty("spring.oauth2.client.registration.google.client-secret");
+        
+        // If OAuth2 properties are not configured, return empty repository
+        if (clientId == null || clientId.isEmpty() || clientSecret == null || clientSecret.isEmpty()) {
+            return new InMemoryClientRegistrationRepository();
+        }
+
+        // Spring Boot auto-configuration should handle this, but we provide a fallback
+        String redirectUri = environment.getProperty("spring.oauth2.client.registration.google.redirect-uri",
+                "http://localhost:8088/login/oauth2/code/google");
+
+        ClientRegistration registration = ClientRegistration
+                .withRegistrationId("google")
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri(redirectUri)
+                .scope("email", "profile")
+                .authorizationUri("https://accounts.google.com/o/oauth2/auth")
+                .tokenUri("https://oauth2.googleapis.com/token")
+                .userInfoUri("https://www.googleapis.com/oauth2/v2/userinfo")
+                .userNameAttributeName("id") // Google v2 userinfo returns 'id', not 'sub'
+                .clientName("Google")
+                .build();
+
+        return new InMemoryClientRegistrationRepository(registration);
     }
 
     @Bean

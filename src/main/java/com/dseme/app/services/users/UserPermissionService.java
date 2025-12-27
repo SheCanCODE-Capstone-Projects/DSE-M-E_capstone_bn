@@ -46,6 +46,10 @@ public class UserPermissionService {
         Notification notification = notificationRepo.findByRoleRequestAndRecipient(request, approver)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
 
+        // Ensure approver is active
+        if (!Boolean.TRUE.equals(approver.getIsActive())) {
+            throw new AccessDeniedException("Your account is not active. You cannot approve or reject requests.");
+        }
 
         if(approver.getRole().equals(Role.FACILITATOR) || approver.getRole().equals(Role.UNASSIGNED)){
             throw new AccessDeniedException("You are not allowed to approve or reject this request");
@@ -71,6 +75,11 @@ public class UserPermissionService {
     public void allowedToRequestRole(User requester){
         if(!requester.getRole().equals(Role.UNASSIGNED)){
             throw new AccessDeniedException("You already have an approved role");
+        }
+        
+        // Ensure user is active before allowing role request
+        if (!Boolean.TRUE.equals(requester.getIsActive())) {
+            throw new AccessDeniedException("Your account is not active. Please contact support.");
         }
     }
 
