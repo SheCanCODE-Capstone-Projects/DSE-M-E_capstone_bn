@@ -198,16 +198,19 @@ public class UserRoleService {
     }
 
     // Getting a list of potential Approvers
+    // Only returns active users who can approve requests
     private List<User> requestApprovers(Role approverRole, Partner targetPartner, Center targetCenter,  Role roleRequest) {
 
         if(roleRequest != Role.FACILITATOR) {
             return userRepo.findAll().stream()
-                    .filter(user -> user.getRole() == approverRole)
+                    .filter(user -> user.getRole() == approverRole
+                            && Boolean.TRUE.equals(user.getIsActive())) // Only active users can approve
                     .toList();
         }
 
         return userRepo.findAll().stream()
                 .filter(user -> user.getRole() == approverRole
+                        && Boolean.TRUE.equals(user.getIsActive()) // Only active users can approve
                         && user.getPartner() != null && user.getPartner().getPartnerId().equals(targetPartner.getPartnerId())
                         && user.getCenter() != null && user.getCenter().getId().equals(targetCenter.getId()))
                 .toList();
