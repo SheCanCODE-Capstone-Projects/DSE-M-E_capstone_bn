@@ -29,14 +29,5 @@ alter table notifications
     add constraint notifications_pk
         primary key (notification_id);
 
-
-
 ALTER TABLE notifications
     ADD COLUMN role_request_id UUID;
-
-ALTER TABLE notifications
-    ADD CONSTRAINT notifications_sender_fk
-        FOREIGN KEY (role_request_id)
-            REFERENCES role_requests(id)
-            ON DELETE CASCADE
-            ON UPDATE CASCADE;
