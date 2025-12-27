@@ -1,4 +1,4 @@
-package com.dseme.app.controllers.auth;
+package com.dseme.app.controllers.users;
 
 import com.dseme.app.dtos.users.RejectRequestDTO;
 import com.dseme.app.dtos.users.RoleRequestDTO;

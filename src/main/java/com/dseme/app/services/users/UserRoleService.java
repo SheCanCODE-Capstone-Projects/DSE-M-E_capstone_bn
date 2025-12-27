@@ -55,7 +55,7 @@ public class UserRoleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Partner does not exist"));
 
         Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(roleRequestDTO.getCenterId(), targetPartner.getPartnerId())
-                .orElseThrow(() -> new ResourceNotFoundException("This Center Location is does not belong to " + targetPartner.getPartnerName()));
+                .orElseThrow(() -> new ResourceNotFoundException("This center location is does not belong to " + targetPartner.getPartnerName()));
 
         Role requestedRole;
         try {
@@ -64,7 +64,13 @@ public class UserRoleService {
                 throw new ResourceNotFoundException("Invalid role: " + roleRequestDTO.getRequestedRole());
             }
 
-        boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterId(requester.getId(), requestedRole, targetPartner.getPartnerId(), targetCenter.getId());
+        boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterIdAndStatus(
+                requester.getId(),
+                requestedRole,
+                targetPartner.getPartnerId(),
+                targetCenter.getId(),
+                RequestStatus.PENDING
+        );
 
         if (checkDuplicates) {
             throw new ResourceAlreadyExistsException("This request already exists!");
@@ -192,17 +198,21 @@ public class UserRoleService {
     }
 
     // Getting a list of potential Approvers
+    // Only returns active users who can approve requests
     private List<User> requestApprovers(Role approverRole, Partner targetPartner, Center targetCenter,  Role roleRequest) {
 
         if(roleRequest != Role.FACILITATOR) {
             return userRepo.findAll().stream()
-                    .filter(user -> user.getRole() == approverRole)
+                    .filter(user -> user.getRole() == approverRole
+                            && Boolean.TRUE.equals(user.getIsActive())) // Only active users can approve
                     .toList();
         }
 
         return userRepo.findAll().stream()
                 .filter(user -> user.getRole() == approverRole
+                        && Boolean.TRUE.equals(user.getIsActive()) // Only active users can approve
                         && user.getPartner() != null && user.getPartner().getPartnerId().equals(targetPartner.getPartnerId())
-                        && user.getCenter() != null && user.getCenter().getId().equals(targetCenter.getId()))                .toList();
+                        && user.getCenter() != null && user.getCenter().getId().equals(targetCenter.getId()))
+                .toList();
     }
 }
