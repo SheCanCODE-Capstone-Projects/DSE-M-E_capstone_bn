@@ -16,6 +16,8 @@ import java.util.List;
  * IMPORTANT: Handles OAuth2 users (Google) who have null passwordHash.
  * For OAuth users, we use a placeholder password since they authenticate
  * via OAuth2, not password. The JWT filter validates the token, not the password.
+ * 
+ * Also checks isVerified and isActive status - user is enabled only if both are true.
  */
 @Service
 public class UserDetailService implements UserDetailsService {
@@ -40,9 +42,17 @@ public class UserDetailService implements UserDetailsService {
             ? user.getPasswordHash() 
             : "{noop}oauth2_user"; // Placeholder password for OAuth users
 
+        // User is enabled only if both isVerified and isActive are true
+        boolean enabled = Boolean.TRUE.equals(user.getIsVerified()) 
+                       && Boolean.TRUE.equals(user.getIsActive());
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 password,
+                enabled, // account enabled (verified and active)
+                true,   // account non-expired
+                true,   // credentials non-expired
+                true,   // account non-locked
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
         );
     }

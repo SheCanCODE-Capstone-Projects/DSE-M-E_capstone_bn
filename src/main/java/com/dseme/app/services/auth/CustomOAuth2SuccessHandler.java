@@ -12,12 +12,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 
 /**
- * Custom OAuth2 success handler that generates a JWT token and redirects to
- * /api/auth/google endpoint where the frontend can retrieve the token.
+ * Custom OAuth2 success handler that handles Google OAuth2 authentication.
+ * 
+ * For new users: Registers them, sets isVerified=false, isActive=false, sends verification email,
+ * and redirects with a message to verify email.
+ * 
+ * For existing users: Checks if email is verified before allowing login.
+ * If verified and active, generates JWT token. If not verified, redirects with message.
  */
 @Component
 @RequiredArgsConstructor
@@ -26,48 +32,63 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final UserRepository userRepo;
     private final JwtUtil jwtUtil;
     private final OAuth2TokenStorage tokenStorage;
+    private final EmailVerificationService emailVerificationService;
 
     @Override
+    @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
 
         User user = userRepo.findByEmail(oAuth2User.getEmail())
                 .orElse(null);
 
-        String token;
-
         if (user == null) {
-            // Register a new user and generate token
-            token = jwtUtil.generateToken(registerOAuth2User(oAuth2User));
-        } else {
-            // Return token for existing user
-            token = jwtUtil.generateToken(oAuth2User.getEmail());
+            // Register a new OAuth2 user
+            user = registerOAuth2User(oAuth2User);
+            // Send verification email
+            emailVerificationService.generateAndSendVerificationToken(user);
+            // Redirect with message to verify email (no JWT token yet)
+            response.sendRedirect("/api/auth/google?message=Registration successful. Please check your email to verify your account.");
+            return;
         }
 
-        // Store the token temporarily and get a code
-        String code = tokenStorage.storeToken(token);
+        // Existing user - check if email is verified
+        if (!Boolean.TRUE.equals(user.getIsVerified())) {
+            // User not verified - redirect with message
+            response.sendRedirect("/api/auth/google?error=Please verify your email first. Check your inbox for the verification link.");
+            return;
+        }
 
-        // Redirect to /api/auth/google with the code
+        // User is verified - check if account is active
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            response.sendRedirect("/api/auth/google?error=Your account is not active. Please contact support.");
+            return;
+        }
+
+        // User is verified and active - generate JWT token
+        String token = jwtUtil.generateToken(user.getEmail());
+        String code = tokenStorage.storeToken(token);
         response.sendRedirect("/api/auth/google?code=" + code);
     }
 
     /**
      * Registers a new OAuth2 user in the database.
+     * Sets isVerified=false and isActive=false (same as regular registration).
+     * 
      * @param oAuth2User The OAuth2 user from Google
-     * @return The email of the registered user
+     * @return The registered User entity
      */
-    private String registerOAuth2User(CustomOAuth2User oAuth2User) {
+    private User registerOAuth2User(CustomOAuth2User oAuth2User) {
         User user = new User();
         user.setEmail(oAuth2User.getEmail());
         user.setRole(Role.UNASSIGNED);
         user.setProvider(Provider.GOOGLE);
         user.setFirstName(oAuth2User.getName());
-        user.setIsActive(true);
+        user.setIsActive(false); // Same as regular registration - inactive until verified
+        user.setIsVerified(false); // Must verify email before login
         // Note: passwordHash is null for OAuth users, which is handled in UserDetailService
 
-        userRepo.save(user);
-
-        return user.getEmail();
+        return userRepo.save(user);
     }
 
 }
