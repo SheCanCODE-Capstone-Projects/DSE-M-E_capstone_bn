@@ -47,6 +47,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // Skip JWT processing for login page, OAuth2 endpoints, and form login POST
+        String requestPath = request.getRequestURI();
+        if (requestPath.startsWith("/login") || 
+            requestPath.startsWith("/oauth2") || 
+            requestPath.startsWith("/api/auth/google") ||
+            requestPath.startsWith("/api/auth/login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         try {
             String jwt = parseJwt(request);
 
