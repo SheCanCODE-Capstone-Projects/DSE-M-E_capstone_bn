@@ -10,7 +10,6 @@ import com.dseme.app.exceptions.AccountInactiveException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.models.Forgotpassword;
 import com.dseme.app.models.User;
-import com.dseme.app.services.auth.EmailVerificationService;
 import com.dseme.app.repositories.ForgotPasswordRepository;
 import com.dseme.app.repositories.UserRepository;
 import com.dseme.app.utilities.JwtUtil;
