@@ -10,6 +10,7 @@ import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.Enrollment;
 import com.dseme.app.models.Participant;
+import com.dseme.app.repositories.AttendanceRepository;
 import com.dseme.app.repositories.EnrollmentRepository;
 import com.dseme.app.repositories.ParticipantRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class ParticipantService {
 
     private final ParticipantRepository participantRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRepository attendanceRepository;
     private final CohortIsolationService cohortIsolationService;
 
     /**
@@ -278,6 +280,167 @@ public class ParticipantService {
 
         // Return DTO to avoid circular references and sensitive data
         return toResponseDTO(participant);
+    }
+
+    /**
+     * Gets detailed participant information by ID.
+     * 
+     * @param context Facilitator context
+     * @param participantId Participant ID
+     * @return ParticipantDetailDTO
+     * @throws ResourceNotFoundException if participant not found
+     * @throws AccessDeniedException if participant doesn't belong to facilitator's scope
+     */
+    public com.dseme.app.dtos.facilitator.ParticipantDetailDTO getParticipantDetail(
+            FacilitatorContext context, 
+            UUID participantId
+    ) {
+        // Validate facilitator has active cohort
+        cohortIsolationService.getFacilitatorActiveCohort(context);
+
+        // Load participant
+        Participant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Participant not found with ID: " + participantId
+                ));
+
+        // Validate participant belongs to facilitator's partner
+        if (!participant.getPartner().getPartnerId().equals(context.getPartnerId())) {
+            throw new AccessDeniedException(
+                "Access denied. Participant does not belong to your assigned partner."
+            );
+        }
+
+        // Get enrollment for facilitator's active cohort
+        Enrollment enrollment = enrollmentRepository.findByParticipantId(participantId).stream()
+                .filter(e -> e.getCohort().getId().equals(context.getCohortId()))
+                .findFirst()
+                .orElseThrow(() -> new AccessDeniedException(
+                    "Access denied. Participant is not enrolled in your active cohort."
+                ));
+
+        // Calculate attendance percentage
+        java.math.BigDecimal attendancePercentage = calculateAttendancePercentage(enrollment);
+
+        // Get display status
+        String displayStatus = getDisplayStatus(enrollment);
+
+        return com.dseme.app.dtos.facilitator.ParticipantDetailDTO.builder()
+                .participantId(participant.getId())
+                .firstName(participant.getFirstName())
+                .lastName(participant.getLastName())
+                .email(participant.getEmail())
+                .phone(participant.getPhone())
+                .gender(participant.getGender())
+                .disabilityStatus(participant.getDisabilityStatus())
+                .cohortName(enrollment.getCohort().getCohortName())
+                .enrollmentStatus(displayStatus)
+                .attendancePercentage(attendancePercentage)
+                .enrollmentId(enrollment.getId())
+                .cohortId(enrollment.getCohort().getId())
+                .build();
+    }
+
+    /**
+     * Calculates attendance percentage for an enrollment.
+     */
+    private java.math.BigDecimal calculateAttendancePercentage(Enrollment enrollment) {
+        java.util.List<com.dseme.app.models.Attendance> allAttendances = enrollment.getAttendances();
+        
+        if (allAttendances.isEmpty()) {
+            return java.math.BigDecimal.ZERO;
+        }
+
+        long presentCount = allAttendances.stream()
+                .filter(a -> a.getStatus() == com.dseme.app.enums.AttendanceStatus.PRESENT || 
+                            a.getStatus() == com.dseme.app.enums.AttendanceStatus.LATE || 
+                            a.getStatus() == com.dseme.app.enums.AttendanceStatus.EXCUSED)
+                .count();
+
+        return java.math.BigDecimal.valueOf(presentCount)
+                .divide(java.math.BigDecimal.valueOf(allAttendances.size()), 4, java.math.RoundingMode.HALF_UP)
+                .multiply(java.math.BigDecimal.valueOf(100))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Gets display status for enrollment.
+     * Returns "INACTIVE" for ENROLLED status after 2-week gap, otherwise returns status name.
+     */
+    private String getDisplayStatus(Enrollment enrollment) {
+        if (enrollment.getStatus() == EnrollmentStatus.ENROLLED) {
+            // Check if there's a 2-week gap (meaning they were ACTIVE before)
+            java.time.LocalDate mostRecentAttendance = attendanceRepository
+                    .findMostRecentAttendanceDateByEnrollmentId(enrollment.getId());
+            
+            if (mostRecentAttendance != null) {
+                long daysSinceLastAttendance = java.time.temporal.ChronoUnit.DAYS.between(
+                        mostRecentAttendance, java.time.LocalDate.now());
+                if (daysSinceLastAttendance >= 14) {
+                    return "INACTIVE";
+                }
+            }
+        }
+        
+        return enrollment.getStatus().name();
+    }
+
+    /**
+     * Updates enrollment status manually (for DROPPED_OUT, WITHDRAWN).
+     * 
+     * @param context Facilitator context
+     * @param enrollmentId Enrollment ID
+     * @param dto Status update DTO
+     * @return Updated enrollment
+     * @throws ResourceNotFoundException if enrollment not found
+     * @throws AccessDeniedException if enrollment doesn't belong to facilitator's scope
+     */
+    public Enrollment updateEnrollmentStatus(
+            FacilitatorContext context,
+            UUID enrollmentId,
+            com.dseme.app.dtos.facilitator.UpdateEnrollmentStatusDTO dto
+    ) {
+        // Validate facilitator has active cohort
+        cohortIsolationService.getFacilitatorActiveCohort(context);
+
+        // Load enrollment
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Enrollment not found with ID: " + enrollmentId
+                ));
+
+        // Validate enrollment belongs to facilitator's active cohort
+        if (!enrollment.getCohort().getId().equals(context.getCohortId())) {
+            throw new AccessDeniedException(
+                "Access denied. Enrollment does not belong to your assigned active cohort."
+            );
+        }
+
+        // Validate enrollment's cohort belongs to facilitator's center
+        if (!enrollment.getCohort().getCenter().getId().equals(context.getCenterId())) {
+            throw new AccessDeniedException(
+                "Access denied. Enrollment's cohort does not belong to your assigned center."
+            );
+        }
+
+        // Only allow DROPPED_OUT and WITHDRAWN status changes by facilitator
+        if (dto.getStatus() != EnrollmentStatus.DROPPED_OUT && 
+            dto.getStatus() != EnrollmentStatus.WITHDRAWN) {
+            throw new AccessDeniedException(
+                "Access denied. Facilitators can only set status to DROPPED_OUT or WITHDRAWN."
+            );
+        }
+
+        // Update status
+        enrollment.setStatus(dto.getStatus());
+
+        // Set dropout date and reason if status is DROPPED_OUT
+        if (dto.getStatus() == EnrollmentStatus.DROPPED_OUT) {
+            enrollment.setDropoutDate(java.time.LocalDate.now());
+            enrollment.setDropoutReason(dto.getReason());
+        }
+
+        return enrollmentRepository.save(enrollment);
     }
 }
 

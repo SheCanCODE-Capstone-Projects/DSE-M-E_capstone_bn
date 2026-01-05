@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +35,7 @@ import java.util.UUID;
 public class FacilitatorDashboardService {
 
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRepository attendanceRepository;
     private final NotificationRepository notificationRepository;
     private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
@@ -53,17 +56,27 @@ public class FacilitatorDashboardService {
         // Get all training modules for the cohort's program
         List<TrainingModule> modules = trainingModuleRepository.findByProgramId(activeCohort.getProgram().getId());
         
+        // Calculate active participants count (enrollments with status ENROLLED or ACTIVE)
+        Long activeParticipantsCount = calculateActiveParticipantsCount(context.getCohortId());
+        
+        // Calculate weekly attendance statistics
+        FacilitatorDashboardDTO.WeeklyAttendanceStats weeklyAttendance = calculateWeeklyAttendanceStats(
+                context.getCohortId(), activeCohort);
+        
         // Build dashboard DTO
         return FacilitatorDashboardDTO.builder()
                 .cohortId(activeCohort.getId())
                 .cohortName(activeCohort.getCohortName())
+                .cohortStartDate(activeCohort.getStartDate())
                 .programName(activeCohort.getProgram().getProgramName())
                 .enrollmentCount((long) enrollments.size())
                 .activeEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.ACTIVE))
                 .completedEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.COMPLETED))
                 .droppedOutEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.DROPPED_OUT))
+                .activeParticipantsCount(activeParticipantsCount)
                 .totalParticipants((long) enrollments.size())
                 .totalModules((long) modules.size())
+                .weeklyAttendance(weeklyAttendance)
                 .attendancePercentage(calculateAttendancePercentage(enrollments, modules))
                 .totalAttendanceRecords(countTotalAttendanceRecords(enrollments))
                 .expectedAttendanceRecords(calculateExpectedAttendanceRecords(enrollments, modules))
@@ -71,6 +84,7 @@ public class FacilitatorDashboardService {
                 .pendingScoresCount((long) findPendingScores(enrollments, modules).size())
                 .pendingScores(findPendingScores(enrollments, modules))
                 .averageScore(calculateAverageScore(enrollments))
+                .moduleCompletionRate(calculateModuleCompletionRate(enrollments, modules))
                 .unreadNotificationsCount(countUnreadNotifications(context.getFacilitator()))
                 .recentNotifications(getRecentNotifications(context.getFacilitator()))
                 .completedModules(countCompletedModules(enrollments, modules))
@@ -283,6 +297,192 @@ public class FacilitatorDashboardService {
         }
         
         return completedCount;
+    }
+
+    /**
+     * Calculates the number of active participants in the cohort.
+     * Active participants are those with enrollment status ENROLLED or ACTIVE.
+     * 
+     * @param cohortId Cohort ID
+     * @return Number of active participants
+     */
+    private Long calculateActiveParticipantsCount(UUID cohortId) {
+        // Count enrollments with status ENROLLED or ACTIVE
+        long enrolledCount = enrollmentRepository.countByCohortIdAndStatus(cohortId, EnrollmentStatus.ENROLLED);
+        long activeCount = enrollmentRepository.countByCohortIdAndStatus(cohortId, EnrollmentStatus.ACTIVE);
+        return enrolledCount + activeCount;
+    }
+
+    /**
+     * Calculates weekly attendance statistics with comparison to previous week.
+     * 
+     * @param cohortId Cohort ID
+     * @param cohort Cohort entity (for accessing program)
+     * @return Weekly attendance statistics
+     */
+    private FacilitatorDashboardDTO.WeeklyAttendanceStats calculateWeeklyAttendanceStats(UUID cohortId, Cohort cohort) {
+        LocalDate today = LocalDate.now();
+        
+        // Calculate this week's date range (Monday to Sunday)
+        LocalDate thisWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate thisWeekEnd = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+        
+        // Calculate last week's date range
+        LocalDate lastWeekStart = thisWeekStart.minusWeeks(1);
+        LocalDate lastWeekEnd = thisWeekEnd.minusWeeks(1);
+        
+        // Get all enrollments for the cohort to calculate expected attendance
+        List<Enrollment> enrollments = enrollmentRepository.findByCohortId(cohortId);
+        List<Enrollment> activeEnrollments = enrollments.stream()
+                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED || e.getStatus() == EnrollmentStatus.ACTIVE)
+                .toList();
+        
+        // Get all training modules for the cohort's program
+        List<TrainingModule> modules = cohort != null && cohort.getProgram() != null ? 
+                trainingModuleRepository.findByProgramId(cohort.getProgram().getId()) : new ArrayList<>();
+        
+        // Count total attendance records (all statuses) for this week and last week
+        // This represents the actual recorded attendance sessions
+        Long thisWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
+                cohortId, thisWeekStart, thisWeekEnd);
+        Long lastWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
+                cohortId, lastWeekStart, lastWeekEnd);
+        
+        // Count present attendance records for this week
+        Long thisWeekPresentCount = attendanceRepository.countPresentByCohortIdAndSessionDateBetween(
+                cohortId, thisWeekStart, thisWeekEnd);
+        
+        // Count present attendance records for last week
+        Long lastWeekPresentCount = attendanceRepository.countPresentByCohortIdAndSessionDateBetween(
+                cohortId, lastWeekStart, lastWeekEnd);
+        
+        // Use total recorded attendance as expected count (more realistic than calculated)
+        // If no attendance records exist, use a fallback calculation
+        long thisWeekExpectedCount = thisWeekTotalCount > 0 ? thisWeekTotalCount : 
+                calculateFallbackExpectedCount(activeEnrollments.size(), modules.size(), thisWeekStart, thisWeekEnd);
+        long lastWeekExpectedCount = lastWeekTotalCount > 0 ? lastWeekTotalCount :
+                calculateFallbackExpectedCount(activeEnrollments.size(), modules.size(), lastWeekStart, lastWeekEnd);
+        
+        // Calculate attendance rates
+        BigDecimal thisWeekRate = thisWeekExpectedCount > 0 ?
+                BigDecimal.valueOf(thisWeekPresentCount)
+                        .divide(BigDecimal.valueOf(thisWeekExpectedCount), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100))
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+        
+        BigDecimal lastWeekRate = lastWeekExpectedCount > 0 ?
+                BigDecimal.valueOf(lastWeekPresentCount)
+                        .divide(BigDecimal.valueOf(lastWeekExpectedCount), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100))
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+        
+        // Calculate change from last week
+        BigDecimal change = thisWeekRate.subtract(lastWeekRate);
+        
+        // Format change display text
+        String changeDisplayText;
+        if (change.compareTo(BigDecimal.ZERO) > 0) {
+            changeDisplayText = String.format("+%.1f%% from last week", change.doubleValue());
+        } else if (change.compareTo(BigDecimal.ZERO) < 0) {
+            changeDisplayText = String.format("%.1f%% from last week", change.doubleValue());
+        } else {
+            changeDisplayText = "No change from last week";
+        }
+        
+        return FacilitatorDashboardDTO.WeeklyAttendanceStats.builder()
+                .thisWeekAttendanceRate(thisWeekRate)
+                .lastWeekAttendanceRate(lastWeekRate)
+                .changeFromLastWeek(change)
+                .changeDisplayText(changeDisplayText)
+                .thisWeekStartDate(thisWeekStart)
+                .thisWeekEndDate(thisWeekEnd)
+                .lastWeekStartDate(lastWeekStart)
+                .lastWeekEndDate(lastWeekEnd)
+                .thisWeekPresentCount(thisWeekPresentCount)
+                .thisWeekExpectedCount(thisWeekExpectedCount)
+                .lastWeekPresentCount(lastWeekPresentCount)
+                .lastWeekExpectedCount(lastWeekExpectedCount)
+                .build();
+    }
+
+    /**
+     * Counts working days (Monday to Friday) in a date range.
+     * 
+     * @param startDate Start date (inclusive)
+     * @param endDate End date (inclusive)
+     * @return Number of working days
+     */
+    private long countWorkingDays(LocalDate startDate, LocalDate endDate) {
+        long count = 0;
+        LocalDate current = startDate;
+        while (!current.isAfter(endDate)) {
+            DayOfWeek dayOfWeek = current.getDayOfWeek();
+            if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                count++;
+            }
+            current = current.plusDays(1);
+        }
+        return count;
+    }
+
+    /**
+     * Calculates fallback expected attendance count when no attendance records exist.
+     * Uses a simple calculation: active enrollments * modules * working days.
+     * 
+     * @param activeEnrollmentsCount Number of active enrollments
+     * @param modulesCount Number of training modules
+     * @param startDate Week start date
+     * @param endDate Week end date
+     * @return Fallback expected count
+     */
+    private long calculateFallbackExpectedCount(long activeEnrollmentsCount, int modulesCount, 
+                                                LocalDate startDate, LocalDate endDate) {
+        long workingDays = countWorkingDays(startDate, endDate);
+        return activeEnrollmentsCount * modulesCount * workingDays;
+    }
+
+    /**
+     * Calculates training module completion rate.
+     * A module is considered completed if all active enrollments have scores for it.
+     * 
+     * @param enrollments All enrollments in the cohort
+     * @param modules All training modules in the program
+     * @return Completion rate as percentage (0-100)
+     */
+    private BigDecimal calculateModuleCompletionRate(List<Enrollment> enrollments, List<TrainingModule> modules) {
+        if (modules.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Filter active enrollments
+        List<Enrollment> activeEnrollments = enrollments.stream()
+                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED || e.getStatus() == EnrollmentStatus.ACTIVE)
+                .toList();
+        
+        if (activeEnrollments.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Count how many modules are completed (all active enrollments have scores)
+        long completedModules = 0;
+        for (TrainingModule module : modules) {
+            long enrollmentsWithScores = activeEnrollments.stream()
+                    .filter(e -> e.getScores().stream()
+                            .anyMatch(s -> s.getModule().getId().equals(module.getId())))
+                    .count();
+            
+            if (enrollmentsWithScores == activeEnrollments.size()) {
+                completedModules++;
+            }
+        }
+        
+        // Calculate completion rate
+        return BigDecimal.valueOf(completedModules)
+                .divide(BigDecimal.valueOf(modules.size()), 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }
 

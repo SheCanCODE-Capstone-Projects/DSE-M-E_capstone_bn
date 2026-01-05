@@ -41,6 +41,15 @@ public class Center {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    /**
+     * On-time threshold for attendance.
+     * Before this time = PRESENT, at/after this time = LATE.
+     * Default: 09:00:00 (9 AM) in CAT timezone (GMT+2).
+     * Format: HH:mm:ss (e.g., "09:00:00")
+     */
+    @Column(name = "on_time_threshold")
+    private java.time.LocalTime onTimeThreshold;
+
     @Column(name = "created_at")
     private Instant createdAt;
 

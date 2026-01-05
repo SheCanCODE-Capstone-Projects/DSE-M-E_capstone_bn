@@ -37,5 +37,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
      * Used to check if enrollment already exists.
      */
     java.util.Optional<Enrollment> findByParticipantIdAndCohortId(UUID participantId, UUID cohortId);
+
+    /**
+     * Find enrollments by cohort ID and status.
+     * Used to count active participants in a cohort.
+     */
+    List<Enrollment> findByCohortIdAndStatus(UUID cohortId, com.dseme.app.enums.EnrollmentStatus status);
+
+    /**
+     * Count enrollments by cohort ID and status.
+     * Used to count active participants in a cohort.
+     */
+    long countByCohortIdAndStatus(UUID cohortId, com.dseme.app.enums.EnrollmentStatus status);
 }
 

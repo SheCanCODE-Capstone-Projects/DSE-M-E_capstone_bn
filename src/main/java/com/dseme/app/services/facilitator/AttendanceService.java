@@ -41,6 +41,7 @@ public class AttendanceService {
     private final EnrollmentRepository enrollmentRepository;
     private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
+    private final EnrollmentStatusService enrollmentStatusService;
 
     /**
      * Records attendance for one or more participants (batch support).
@@ -132,7 +133,14 @@ public class AttendanceService {
                     .build();
 
             // Save attendance (unique constraint prevents duplicates at DB level)
-            attendances.add(attendanceRepository.save(attendance));
+            Attendance savedAttendance = attendanceRepository.save(attendance);
+            attendances.add(savedAttendance);
+
+            // Update enrollment status: ENROLLED → ACTIVE on first attendance
+            // Only if status is PRESENT, LATE, or EXCUSED (not ABSENT)
+            if (record.getStatus() != com.dseme.app.enums.AttendanceStatus.ABSENT) {
+                enrollmentStatusService.activateEnrollmentOnFirstAttendance(enrollment.getId());
+            }
         }
 
         return attendances;

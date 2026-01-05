@@ -32,8 +32,8 @@ public class SurveyResponse {
     @JoinColumn(name = "enrollment_id")
     private Enrollment enrollment;
 
-    @Column(name = "submitted_at", nullable = false)
-    private Instant submittedAt;
+    @Column(name = "submitted_at")
+    private Instant submittedAt; // NULL if response is pending (not yet submitted)
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submitted_by")
@@ -49,9 +49,7 @@ public class SurveyResponse {
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
-        if (this.submittedAt == null) {
-            this.submittedAt = Instant.now();
-        }
+        // submittedAt remains null until participant actually submits the response
     }
 }
 

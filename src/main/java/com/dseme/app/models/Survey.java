@@ -40,6 +40,12 @@ public class Survey {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(name = "end_date")
+    private java.time.LocalDate endDate;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

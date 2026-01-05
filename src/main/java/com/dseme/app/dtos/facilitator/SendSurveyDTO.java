@@ -30,6 +30,18 @@ public class SendSurveyDTO {
 
     private String description;
 
+    /**
+     * Survey start date (when survey becomes available).
+     * Optional, defaults to today if not provided.
+     */
+    private java.time.LocalDate startDate;
+
+    /**
+     * Survey end/due date (when survey closes).
+     * Optional but recommended for proper tracking.
+     */
+    private java.time.LocalDate endDate;
+
     @NotNull(message = "Participant IDs are required")
     private List<UUID> participantIds;
 }
