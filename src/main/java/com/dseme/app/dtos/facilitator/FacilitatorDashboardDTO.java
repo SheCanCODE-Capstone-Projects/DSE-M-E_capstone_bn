@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +27,19 @@ public class FacilitatorDashboardDTO {
     private Long completedEnrollments;
     private Long droppedOutEnrollments;
     
-    // Attendance Statistics
+    // Active Participants (for active cohort)
+    private Long activeParticipantsCount;
+    
+    // Cohort Information
+    private UUID cohortId;
+    private String cohortName;
+    private LocalDate cohortStartDate;
+    private String programName;
+    
+    // Weekly Attendance Statistics
+    private WeeklyAttendanceStats weeklyAttendance;
+    
+    // Overall Attendance Statistics
     private BigDecimal attendancePercentage;
     private Long totalAttendanceRecords;
     private Long expectedAttendanceRecords;
@@ -37,14 +50,12 @@ public class FacilitatorDashboardDTO {
     private List<PendingScore> pendingScores;
     private BigDecimal averageScore;
     
+    // Training Module Completion Rate (can be implemented later)
+    private BigDecimal moduleCompletionRate;
+    
     // Notifications
     private Long unreadNotificationsCount;
     private List<NotificationSummary> recentNotifications;
-    
-    // Cohort Information
-    private UUID cohortId;
-    private String cohortName;
-    private String programName;
     
     // Additional Statistics
     private Long totalParticipants;
@@ -89,6 +100,77 @@ public class FacilitatorDashboardDTO {
         private String priority;
         private Boolean isRead;
         private Instant createdAt;
+    }
+
+    /**
+     * Weekly attendance statistics with comparison to previous week.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WeeklyAttendanceStats {
+        /**
+         * This week's attendance rate as percentage (0-100).
+         */
+        private BigDecimal thisWeekAttendanceRate;
+
+        /**
+         * Last week's attendance rate as percentage (0-100).
+         */
+        private BigDecimal lastWeekAttendanceRate;
+
+        /**
+         * Change in attendance rate from last week to this week.
+         * Positive value means improvement, negative means decline.
+         * Example: +3.5 means 3.5% increase from last week.
+         */
+        private BigDecimal changeFromLastWeek;
+
+        /**
+         * Formatted change string for display (e.g., "+3% from last week" or "-2% from last week").
+         */
+        private String changeDisplayText;
+
+        /**
+         * This week's start date (Monday of current week).
+         */
+        private LocalDate thisWeekStartDate;
+
+        /**
+         * This week's end date (Sunday of current week).
+         */
+        private LocalDate thisWeekEndDate;
+
+        /**
+         * Last week's start date (Monday of previous week).
+         */
+        private LocalDate lastWeekStartDate;
+
+        /**
+         * Last week's end date (Sunday of previous week).
+         */
+        private LocalDate lastWeekEndDate;
+
+        /**
+         * Number of present attendance records this week.
+         */
+        private Long thisWeekPresentCount;
+
+        /**
+         * Total expected attendance records this week.
+         */
+        private Long thisWeekExpectedCount;
+
+        /**
+         * Number of present attendance records last week.
+         */
+        private Long lastWeekPresentCount;
+
+        /**
+         * Total expected attendance records last week.
+         */
+        private Long lastWeekExpectedCount;
     }
 }
 

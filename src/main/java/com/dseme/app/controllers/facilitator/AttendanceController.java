@@ -1,9 +1,9 @@
 package com.dseme.app.controllers.facilitator;
 
-import com.dseme.app.dtos.facilitator.FacilitatorContext;
-import com.dseme.app.dtos.facilitator.RecordAttendanceDTO;
+import com.dseme.app.dtos.facilitator.*;
 import com.dseme.app.models.Attendance;
 import com.dseme.app.services.facilitator.AttendanceService;
+import com.dseme.app.services.facilitator.TodayAttendanceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Controller for attendance management by facilitators.
@@ -27,6 +28,7 @@ import java.util.List;
 public class AttendanceController extends FacilitatorBaseController {
 
     private final AttendanceService attendanceService;
+    private final TodayAttendanceService todayAttendanceService;
 
     /**
      * Records attendance for one or more participants (batch support).
@@ -59,6 +61,78 @@ public class AttendanceController extends FacilitatorBaseController {
         List<Attendance> attendances = attendanceService.recordAttendance(context, dto);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(attendances);
+    }
+
+    /**
+     * Gets today's attendance statistics for a training module.
+     * 
+     * GET /api/facilitator/attendance/today/stats?moduleId={moduleId}
+     * 
+     * Returns: PRESENT, ABSENT, LATE, EXCUSED counts and attendance rate percentage.
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param moduleId Training module ID
+     * @return Today's attendance statistics
+     */
+    @GetMapping("/today/stats")
+    public ResponseEntity<TodayAttendanceStatsDTO> getTodayAttendanceStats(
+            HttpServletRequest request,
+            @RequestParam UUID moduleId
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        TodayAttendanceStatsDTO stats = todayAttendanceService.getTodayAttendanceStats(context, moduleId);
+        
+        return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Gets today's attendance list for a training module.
+     * 
+     * GET /api/facilitator/attendance/today/list?moduleId={moduleId}
+     * 
+     * Returns: List of all participants with check-in time and attendance status.
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param moduleId Training module ID
+     * @return List of today's attendance records
+     */
+    @GetMapping("/today/list")
+    public ResponseEntity<List<TodayAttendanceListDTO>> getTodayAttendanceList(
+            HttpServletRequest request,
+            @RequestParam UUID moduleId
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        List<TodayAttendanceListDTO> list = todayAttendanceService.getTodayAttendanceList(context, moduleId);
+        
+        return ResponseEntity.ok(list);
+    }
+
+    /**
+     * Records or updates today's attendance for a participant.
+     * 
+     * POST /api/facilitator/attendance/today/record
+     * 
+     * Handles:
+     * - PRESENT button: Sets PRESENT (before threshold) or LATE (at/after threshold)
+     * - ABSENT button: Sets ABSENT (no reason) or EXCUSED (with reason)
+     * - Updates existing attendance if already recorded
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param dto Attendance record DTO
+     * @return Created or updated attendance record
+     */
+    @PostMapping("/today/record")
+    public ResponseEntity<TodayAttendanceListDTO> recordTodayAttendance(
+            HttpServletRequest request,
+            @Valid @RequestBody RecordTodayAttendanceDTO dto
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        TodayAttendanceListDTO attendance = todayAttendanceService.recordTodayAttendance(context, dto);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(attendance);
     }
 }
 

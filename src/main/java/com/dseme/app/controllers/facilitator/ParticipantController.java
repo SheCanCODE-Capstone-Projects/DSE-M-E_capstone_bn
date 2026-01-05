@@ -1,10 +1,8 @@
 package com.dseme.app.controllers.facilitator;
 
-import com.dseme.app.dtos.facilitator.CreateParticipantDTO;
-import com.dseme.app.dtos.facilitator.FacilitatorContext;
-import com.dseme.app.dtos.facilitator.ParticipantResponseDTO;
-import com.dseme.app.dtos.facilitator.UpdateParticipantDTO;
-import com.dseme.app.models.Participant;
+import com.dseme.app.dtos.facilitator.*;
+import com.dseme.app.models.Enrollment;
+import com.dseme.app.services.facilitator.ParticipantListService;
 import com.dseme.app.services.facilitator.ParticipantService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,6 +27,7 @@ import java.util.UUID;
 public class ParticipantController extends FacilitatorBaseController {
 
     private final ParticipantService participantService;
+    private final ParticipantListService participantListService;
 
     /**
      * Creates a new participant profile and enrolls them in the facilitator's active cohort.
@@ -107,6 +106,106 @@ public class ParticipantController extends FacilitatorBaseController {
         ParticipantResponseDTO participant = participantService.getParticipantById(context, participantId);
         
         return ResponseEntity.ok(participant);
+    }
+
+    /**
+     * Gets detailed participant information by ID.
+     * 
+     * GET /api/facilitator/participants/{participantId}/detail
+     * 
+     * Returns: firstName, lastName, email, phone, gender, disabilityStatus, 
+     *          cohortName, enrollmentStatus, attendancePercentage
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param participantId Participant ID
+     * @return Participant detail
+     */
+    @GetMapping("/{participantId}/detail")
+    public ResponseEntity<ParticipantDetailDTO> getParticipantDetail(
+            HttpServletRequest request,
+            @PathVariable UUID participantId
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        ParticipantDetailDTO participant = participantService.getParticipantDetail(context, participantId);
+        
+        return ResponseEntity.ok(participant);
+    }
+
+    /**
+     * Gets paginated list of participants with search, filter, and sort.
+     * 
+     * GET /api/facilitator/participants/list
+     * 
+     * Query Parameters:
+     * - page: Page number (default: 0)
+     * - size: Page size (default: 10)
+     * - search: Search term (name, email, phone)
+     * - sortBy: Sort field (firstName, lastName, email, phone, enrollmentDate, attendancePercentage, enrollmentStatus)
+     * - sortDirection: Sort direction (ASC, DESC)
+     * - enrollmentStatusFilter: Filter by status (ACTIVE, INACTIVE, COMPLETED, DROPPED_OUT, WITHDRAWN)
+     * - genderFilter: Filter by gender (MALE, FEMALE, OTHER)
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param listRequest List request parameters
+     * @return Paginated participant list
+     */
+    @GetMapping("/list")
+    public ResponseEntity<ParticipantListResponseDTO> getAllParticipants(
+            HttpServletRequest request,
+            @ModelAttribute ParticipantListRequestDTO listRequest
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        ParticipantListResponseDTO response = participantListService.getAllParticipants(context, listRequest);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Gets participant statistics (active/inactive counts, gender distribution).
+     * 
+     * GET /api/facilitator/participants/statistics
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @return Participant statistics
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<ParticipantStatisticsDTO> getParticipantStatistics(
+            HttpServletRequest request
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        ParticipantStatisticsDTO statistics = participantListService.getParticipantStatistics(context);
+        
+        return ResponseEntity.ok(statistics);
+    }
+
+    /**
+     * Updates enrollment status manually (DROPPED_OUT, WITHDRAWN).
+     * 
+     * PUT /api/facilitator/participants/enrollments/{enrollmentId}/status
+     * 
+     * Rules:
+     * - Only DROPPED_OUT and WITHDRAWN can be set by facilitator
+     * - Enrollment must belong to facilitator's active cohort
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @param enrollmentId Enrollment ID
+     * @param dto Status update DTO
+     * @return Updated enrollment
+     */
+    @PutMapping("/enrollments/{enrollmentId}/status")
+    public ResponseEntity<Enrollment> updateEnrollmentStatus(
+            HttpServletRequest request,
+            @PathVariable UUID enrollmentId,
+            @Valid @RequestBody UpdateEnrollmentStatusDTO dto
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        Enrollment enrollment = participantService.updateEnrollmentStatus(context, enrollmentId, dto);
+        
+        return ResponseEntity.ok(enrollment);
     }
 }
 

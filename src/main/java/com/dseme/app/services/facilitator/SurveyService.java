@@ -75,6 +75,10 @@ public class SurveyService {
             );
         }
 
+        // Set default start date to today if not provided
+        java.time.LocalDate startDate = dto.getStartDate() != null ? 
+                dto.getStartDate() : java.time.LocalDate.now();
+
         // Create survey
         Survey survey = Survey.builder()
                 .partner(context.getPartner())
@@ -82,6 +86,8 @@ public class SurveyService {
                 .surveyType(dto.getSurveyType())
                 .title(dto.getTitle())
                 .description(dto.getDescription())
+                .startDate(startDate)
+                .endDate(dto.getEndDate())
                 .status(SurveyStatus.PUBLISHED) // Survey is published and ready for responses
                 .createdBy(context.getFacilitator()) // Audit: who created the survey
                 .build();
@@ -125,11 +131,12 @@ public class SurveyService {
             }
 
             // Create survey response (participant can now respond)
+            // submittedAt is null until participant actually submits
             SurveyResponse response = SurveyResponse.builder()
                     .survey(savedSurvey)
                     .participant(participant)
                     .enrollment(enrollment) // Link to enrollment in active cohort
-                    .submittedAt(null) // Not yet submitted
+                    .submittedAt(null) // Not yet submitted - will be set when participant submits
                     .submittedBy(null) // Will be set when participant submits
                     .build();
 

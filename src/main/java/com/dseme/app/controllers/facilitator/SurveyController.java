@@ -32,6 +32,7 @@ import java.util.UUID;
 public class SurveyController extends FacilitatorBaseController {
 
     private final SurveyService surveyService;
+    private final com.dseme.app.services.facilitator.SurveyStatsService surveyStatsService;
 
     /**
      * Sends a survey to participants in the facilitator's active cohort.
@@ -132,6 +133,31 @@ public class SurveyController extends FacilitatorBaseController {
         SurveyResponseDTO response = surveyService.getSurveyResponseById(context, responseId);
         
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Gets survey statistics for facilitator's active cohort.
+     * 
+     * GET /api/facilitator/surveys/stats
+     * 
+     * Returns:
+     * - Active surveys count (end date not yet arrived)
+     * - Completed surveys count (end date arrived)
+     * - Average response rate percentage
+     * - Pending responses count for active surveys
+     * 
+     * @param request HTTP request (contains FacilitatorContext)
+     * @return Survey statistics
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<com.dseme.app.dtos.facilitator.SurveyStatsDTO> getSurveyStats(
+            HttpServletRequest request
+    ) {
+        FacilitatorContext context = getFacilitatorContext(request);
+        
+        com.dseme.app.dtos.facilitator.SurveyStatsDTO stats = surveyStatsService.getSurveyStats(context);
+        
+        return ResponseEntity.ok(stats);
     }
 }
 

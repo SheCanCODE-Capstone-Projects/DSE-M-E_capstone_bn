@@ -119,6 +119,7 @@ public class ScoreService {
                     .enrollment(enrollment)
                     .module(module)
                     .assessmentType(record.getAssessmentType())
+                    .assessmentName(record.getAssessmentName())
                     .scoreValue(record.getScoreValue())
                     .recordedBy(context.getFacilitator()) // Audit: who recorded the score
                     .recordedAt(Instant.now()) // When the score was recorded
