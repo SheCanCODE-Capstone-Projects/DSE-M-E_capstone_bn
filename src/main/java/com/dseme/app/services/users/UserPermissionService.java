@@ -46,6 +46,10 @@ public class UserPermissionService {
         Notification notification = notificationRepo.findByRoleRequestAndRecipient(request, approver)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
 
+        // Ensure approver is active
+        if (!Boolean.TRUE.equals(approver.getIsActive())) {
+            throw new AccessDeniedException("Your account is not active. You cannot approve or reject requests.");
+        }
 
         if(approver.getRole().equals(Role.FACILITATOR) || approver.getRole().equals(Role.UNASSIGNED)){
             throw new AccessDeniedException("You are not allowed to approve or reject this request");
@@ -54,23 +58,28 @@ public class UserPermissionService {
         // Check if no user is trying to approve their own request
         grantUserAccess(approver, notification.getRecipient().getId(), "You are not allowed to approve or reject this request");
 
-        // Validate approver has authority over the request's scope
-        if (request.getRequestedRole() == Role.FACILITATOR) {
-            // Verify approver is ME_OFFICER or PARTNER for the same center
-            if (!approver.getCenter().equals(request.getCenter())) {
-                throw new AccessDeniedException("You are not authorized to approve requests for this center");
-            }
-        } else {
-            // Verify approver is PARTNER for the same partner organization
-            if (!approver.getPartner().equals(request.getPartner())) {
-                throw new AccessDeniedException("You are not authorized to approve requests for this partner");
-            }
-        }
+//        // Validate approver has authority over the request's scope
+//        if (request.getRequestedRole() == Role.FACILITATOR) {
+//            // Verify approver is ME_OFFICER or PARTNER for the same center
+//            if (!approver.getCenter().equals(request.getCenter())) {
+//                throw new AccessDeniedException("You are not authorized to approve requests for this center");
+//            }
+//        } else {
+//            // Verify approver is PARTNER for the same partner organization
+//            if (!approver.getPartner().equals(request.getPartner())) {
+//                throw new AccessDeniedException("You are not authorized to approve requests for this partner");
+//            }
+//        }
     }
 
     public void allowedToRequestRole(User requester){
         if(!requester.getRole().equals(Role.UNASSIGNED)){
             throw new AccessDeniedException("You already have an approved role");
+        }
+        
+        // Ensure user is active before allowing role request
+        if (!Boolean.TRUE.equals(requester.getIsActive())) {
+            throw new AccessDeniedException("Your account is not active. Please contact support.");
         }
     }
 
