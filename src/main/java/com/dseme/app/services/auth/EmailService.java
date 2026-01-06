@@ -59,20 +59,12 @@ public class EmailService {
             helper.setFrom(fromEmail);
             helper.setSubject("DSE Email Verification");
 
-            // Get backend URL from environment or use default
-            String backendUrl = System.getenv("BACKEND_URL");
-            if (backendUrl == null || backendUrl.isEmpty()) {
-                backendUrl = "http://localhost:8088";
-            }
-            
-            String verificationLink = backendUrl + "/api/auth/verify?token=" + token;
-            
             String htmlContent =
                     "<p>Hello,</p>"
                             + "<p>Please verify your email address by clicking the link below:</p>"
-                            + "<p><a href=\"" + verificationLink + "\">Verify Email</a></p>"
+                            + "<p><a href=\"http://localhost:3000/verify?token=" + token + "\">Verify Email</a></p>"
                             + "<p>Or copy and paste this link in your browser:</p>"
-                            + "<p>" + verificationLink + "</p>"
+                            + "<p>http://localhost:3000/verify?token=" + token + "</p>"
                             + "<p>This link will expire in 24 hours.</p>"
                             + "<p>If you didn't create an account, please ignore this email.</p>"
                             + "<p>Thank you,<br/>DSE Team</p>";
