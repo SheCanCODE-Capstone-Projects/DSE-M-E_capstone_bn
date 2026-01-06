@@ -26,7 +26,6 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-
     public String generateToken(String email) {
         return Jwts.builder()
                 .setSubject(email)

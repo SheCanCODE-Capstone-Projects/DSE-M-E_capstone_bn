@@ -73,10 +73,9 @@ public class EmailVerificationService {
             return false;
         }
 
-        // Mark user as verified and activate account
+        // Mark user as verified
         User user = verificationToken.getUser();
         user.setIsVerified(true);
-        user.setIsActive(true); // Activate account upon email verification
         userRepository.save(user);
 
         // Delete the token
