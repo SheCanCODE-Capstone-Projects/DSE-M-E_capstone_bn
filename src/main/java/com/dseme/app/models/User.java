@@ -1,5 +1,6 @@
 package com.dseme.app.models;
 
+import com.dseme.app.enums.Provider;
 import com.dseme.app.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -66,6 +67,9 @@ public class User{
     @Column(name = "expiry_date")
     private Instant expiryDate;
 
+    @Column(name = "provider")
+    @Enumerated(EnumType.STRING)
+    private Provider provider;
 
     @Builder.Default
     @Column(name = "is_verified")
