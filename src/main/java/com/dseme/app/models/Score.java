@@ -42,6 +42,22 @@ public class Score {
     @Column(name = "score_value", nullable = false, precision = 5, scale = 2)
     private BigDecimal scoreValue;
 
+    /**
+     * Maximum possible score for this assessment.
+     * Defaults to 100.0.
+     */
+    @Builder.Default
+    @Column(name = "max_score", nullable = false, precision = 5, scale = 2)
+    private BigDecimal maxScore = new BigDecimal("100.0");
+
+    /**
+     * Date when the assessment was conducted.
+     * Prioritized over created_at for display purposes.
+     * Can be null if not specified (will use created_at).
+     */
+    @Column(name = "assessment_date")
+    private java.time.LocalDate assessmentDate;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "recorded_by", nullable = false)
     private User recordedBy;

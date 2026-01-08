@@ -1,7 +1,9 @@
 package com.dseme.app.services.facilitator;
 
 import com.dseme.app.dtos.facilitator.FacilitatorContext;
+import com.dseme.app.dtos.facilitator.HistoricalAttendanceDTO;
 import com.dseme.app.dtos.facilitator.RecordAttendanceDTO;
+import com.dseme.app.dtos.facilitator.UpdateAttendanceDTO;
 import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
@@ -180,6 +182,109 @@ public class AttendanceService {
 
         List<Attendance> attendances = recordAttendance(context, dto);
         return attendances.get(0);
+    }
+
+    /**
+     * Gets historical attendance records for a date range.
+     */
+    @Transactional(readOnly = true)
+    public HistoricalAttendanceDTO getHistoricalAttendance(
+            FacilitatorContext context,
+            UUID moduleId,
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate
+    ) {
+        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+        
+        TrainingModule module = trainingModuleRepository.findById(moduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Module not found"));
+
+        // Validate module belongs to facilitator's active cohort's program
+        if (!module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
+            throw new AccessDeniedException(
+                "Access denied. Module does not belong to your active cohort's program."
+            );
+        }
+
+        // Get all enrollments for the cohort
+        List<Enrollment> enrollments = enrollmentRepository.findByCohortId(context.getCohortId());
+
+        // Get attendance records in the date range
+        List<Attendance> attendances = attendanceRepository.findByEnrollmentIdInAndModuleIdAndSessionDateBetween(
+                enrollments.stream().map(Enrollment::getId).toList(),
+                moduleId,
+                startDate,
+                endDate
+        );
+
+        // Map to DTO
+        List<HistoricalAttendanceDTO.AttendanceRecord> records = attendances.stream()
+                .map(attendance -> HistoricalAttendanceDTO.AttendanceRecord.builder()
+                        .attendanceId(attendance.getId())
+                        .enrollmentId(attendance.getEnrollment().getId())
+                        .participantName(attendance.getEnrollment().getParticipant().getFirstName() + " " +
+                                attendance.getEnrollment().getParticipant().getLastName())
+                        .participantEmail(attendance.getEnrollment().getParticipant().getEmail())
+                        .sessionDate(attendance.getSessionDate())
+                        .status(attendance.getStatus().name())
+                        .recordedAt(attendance.getCreatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        // Calculate overall attendance rate
+        long totalRecords = records.size();
+        long presentRecords = records.stream()
+                .filter(r -> r.getStatus().equals("PRESENT") || r.getStatus().equals("LATE") || r.getStatus().equals("EXCUSED"))
+                .count();
+        java.math.BigDecimal overallAttendanceRate = totalRecords > 0 ?
+                java.math.BigDecimal.valueOf(presentRecords)
+                        .divide(java.math.BigDecimal.valueOf(totalRecords), 4, java.math.RoundingMode.HALF_UP)
+                        .multiply(java.math.BigDecimal.valueOf(100))
+                        .setScale(2, java.math.RoundingMode.HALF_UP) :
+                java.math.BigDecimal.ZERO;
+
+        return HistoricalAttendanceDTO.builder()
+                .cohortId(context.getCohortId())
+                .cohortName(activeCohort.getCohortName())
+                .moduleId(moduleId)
+                .moduleName(module.getModuleName())
+                .startDate(startDate)
+                .endDate(endDate)
+                .records(records)
+                .overallAttendanceRate(overallAttendanceRate)
+                .build();
+    }
+
+    /**
+     * Updates an existing attendance record.
+     */
+    public Attendance updateAttendance(FacilitatorContext context, UUID attendanceId, UpdateAttendanceDTO dto) {
+        cohortIsolationService.getFacilitatorActiveCohort(context);
+
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attendance record not found"));
+
+        // Validate attendance belongs to facilitator's active cohort
+        if (!attendance.getEnrollment().getCohort().getId().equals(context.getCohortId())) {
+            throw new AccessDeniedException(
+                "Access denied. Attendance record does not belong to your active cohort."
+            );
+        }
+
+        // Validate enrollment and module match
+        if (!attendance.getEnrollment().getId().equals(dto.getEnrollmentId()) ||
+            !attendance.getModule().getId().equals(dto.getModuleId())) {
+            throw new AccessDeniedException(
+                "Access denied. Enrollment or module mismatch."
+            );
+        }
+
+        // Update attendance
+        attendance.setStatus(dto.getStatus());
+        attendance.setSessionDate(dto.getSessionDate());
+        attendance.setRecordedBy(context.getFacilitator());
+
+        return attendanceRepository.save(attendance);
     }
 }
 

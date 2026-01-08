@@ -16,11 +16,13 @@ public class ParticipantListRequestDTO {
     /**
      * Page number (0-indexed). Default: 0
      */
+    @Builder.Default
     private Integer page = 0;
 
     /**
      * Page size. Default: 10
      */
+    @Builder.Default
     private Integer size = 10;
 
     /**
@@ -31,11 +33,13 @@ public class ParticipantListRequestDTO {
     /**
      * Sort field. Options: firstName, lastName, email, phone, enrollmentDate, attendancePercentage, enrollmentStatus
      */
+    @Builder.Default
     private String sortBy = "firstName";
 
     /**
      * Sort direction. Options: ASC, DESC. Default: ASC
      */
+    @Builder.Default
     private String sortDirection = "ASC";
 
     /**

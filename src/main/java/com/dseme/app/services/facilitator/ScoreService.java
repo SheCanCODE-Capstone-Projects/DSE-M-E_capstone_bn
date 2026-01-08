@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,6 +115,21 @@ public class ScoreService {
                 );
             }
 
+            // Set max score (default to 100.0 if not provided)
+            BigDecimal maxScore = record.getMaxScore() != null ? 
+                    record.getMaxScore() : new BigDecimal("100.0");
+
+            // Validate score value doesn't exceed max score
+            if (record.getScoreValue().compareTo(maxScore) > 0) {
+                throw new AccessDeniedException(
+                    "Score value (" + record.getScoreValue() + ") cannot exceed max score (" + maxScore + ")"
+                );
+            }
+
+            // Set assessment date (default to today if not provided)
+            java.time.LocalDate assessmentDate = record.getAssessmentDate() != null ?
+                    record.getAssessmentDate() : java.time.LocalDate.now();
+
             // Create score record
             Score score = Score.builder()
                     .enrollment(enrollment)
@@ -121,6 +137,8 @@ public class ScoreService {
                     .assessmentType(record.getAssessmentType())
                     .assessmentName(record.getAssessmentName())
                     .scoreValue(record.getScoreValue())
+                    .maxScore(maxScore)
+                    .assessmentDate(assessmentDate)
                     .recordedBy(context.getFacilitator()) // Audit: who recorded the score
                     .recordedAt(Instant.now()) // When the score was recorded
                     .build();

@@ -1,5 +1,6 @@
 package com.dseme.app.services.facilitator;
 
+import com.dseme.app.dtos.facilitator.BulkEnrollmentResponseDTO;
 import com.dseme.app.dtos.facilitator.EnrollParticipantDTO;
 import com.dseme.app.dtos.facilitator.FacilitatorContext;
 import com.dseme.app.enums.CohortStatus;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -166,6 +168,45 @@ public class EnrollmentService {
                 "Participant is already enrolled in this cohort."
             );
         }
+    }
+
+    /**
+     * Bulk enrolls multiple participants into the facilitator's active cohort.
+     * 
+     * @param context Facilitator context
+     * @param participantIds List of participant IDs to enroll
+     * @return Bulk enrollment response with success/failure counts
+     */
+    public BulkEnrollmentResponseDTO bulkEnrollParticipants(
+            FacilitatorContext context, 
+            List<UUID> participantIds
+    ) {
+        long successful = 0L;
+        long failed = 0L;
+        List<BulkEnrollmentResponseDTO.EnrollmentError> errors = new java.util.ArrayList<>();
+
+        for (UUID participantId : participantIds) {
+            try {
+                EnrollParticipantDTO dto = EnrollParticipantDTO.builder()
+                        .participantId(participantId)
+                        .build();
+                enrollParticipant(context, dto);
+                successful++;
+            } catch (Exception e) {
+                failed++;
+                errors.add(BulkEnrollmentResponseDTO.EnrollmentError.builder()
+                        .participantId(participantId)
+                        .reason(e.getMessage())
+                        .build());
+            }
+        }
+
+        return BulkEnrollmentResponseDTO.builder()
+                .totalRequested((long) participantIds.size())
+                .successful(successful)
+                .failed(failed)
+                .errors(errors)
+                .build();
     }
 }
 
