@@ -9,5 +9,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8088
+# Railway automatically sets PORT environment variable
+# The application.yaml uses ${PORT:8088} which will pick it up
+EXPOSE ${PORT:-8088}
 ENTRYPOINT ["java","-jar","app.jar"]
