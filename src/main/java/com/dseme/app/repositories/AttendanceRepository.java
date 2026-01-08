@@ -94,5 +94,28 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
            "WHERE a.enrollment.id = :enrollmentId " +
            "AND (a.status = 'PRESENT' OR a.status = 'LATE' OR a.status = 'EXCUSED')")
     LocalDate findMostRecentAttendanceDateByEnrollmentId(@Param("enrollmentId") UUID enrollmentId);
+
+    /**
+     * Find attendance records by enrollment IDs, module ID, and date range.
+     * Used for export functionality.
+     */
+    @Query("SELECT a FROM Attendance a " +
+           "WHERE a.enrollment.id IN :enrollmentIds " +
+           "AND a.module.id = :moduleId " +
+           "AND a.sessionDate >= :startDate " +
+           "AND a.sessionDate <= :endDate " +
+           "ORDER BY a.sessionDate DESC")
+    List<Attendance> findByEnrollmentIdInAndModuleIdAndSessionDateBetween(
+            @Param("enrollmentIds") List<UUID> enrollmentIds,
+            @Param("moduleId") UUID moduleId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    /**
+     * Find all attendance records for a specific enrollment.
+     * Used for calculating attendance percentage.
+     */
+    List<Attendance> findByEnrollmentId(UUID enrollmentId);
 }
 

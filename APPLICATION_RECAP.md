@@ -342,6 +342,332 @@ The **DSE M&E (Monitoring & Evaluation) Platform** is a multi-tenant digital sys
 
 ---
 
+### **EPIC F-11: Training Module Management (Enhanced)**
+**Endpoints**:
+- `GET /api/facilitator/modules` - List all training modules
+- `GET /api/facilitator/modules/{moduleId}` - Get module details
+- `PUT /api/facilitator/modules/{moduleId}` - Update module
+- `DELETE /api/facilitator/modules/{moduleId}` - Delete module
+
+**Functionality**:
+- List all modules for facilitator's active cohort's program
+- View module details
+- Update module information (only creator can update)
+- Delete module (only if no attendance/score records exist)
+
+**Validations**:
+- ✅ Module must belong to facilitator's active cohort's program
+- ✅ Only creator can update/delete
+- ✅ Cohort must still be active
+- ✅ Cannot delete if module has attendance or score records
+
+**Response**: `TrainingModule` entity or `List<TrainingModule>`
+
+---
+
+### **EPIC F-12: Survey Detail View**
+**Endpoint**: `GET /api/facilitator/surveys/{surveyId}/detail`
+
+**Functionality**:
+- Get complete survey detail with summary, questions, and paginated participant responses
+- View survey status, response rates, and completion progress
+- Track individual participant response statuses
+
+**Response** (`SurveyDetailResponseDTO`):
+```json
+{
+  "surveyDetail": {
+    "surveyId": "uuid",
+    "surveyTitle": "string",
+    "description": "string",
+    "createdAt": "date",
+    "dueDate": "date",
+    "responseRate": "number",
+    "totalQuestions": "number",
+    "completedCount": "number"
+  },
+  "questions": [{"questionId": "uuid", "questionText": "string", ...}],
+  "participantResponses": {
+    "content": [{"participantId": "uuid", "status": "PENDING|IN_PROGRESS|COMPLETED", ...}],
+    "totalElements": "number",
+    "totalPages": "number"
+  }
+}
+```
+
+**Validations**:
+- ✅ Survey must belong to facilitator's active cohort
+- ✅ Pagination support (default 10 per page)
+
+---
+
+### **EPIC F-13: Export Functionality**
+**Endpoints**:
+- `GET /api/facilitator/export/participants` - Export participant list (CSV)
+- `GET /api/facilitator/export/attendance?moduleId={id}&startDate={date}&endDate={date}` - Export attendance report (CSV)
+- `GET /api/facilitator/export/grades?moduleId={id}` - Export grade report (CSV)
+- `GET /api/facilitator/export/outcomes` - Export outcomes report (CSV)
+- `GET /api/facilitator/export/surveys/{surveyId}` - Export survey responses (CSV)
+
+**Functionality**:
+- Export data to CSV format for external analysis
+- All exports include proper CSV escaping
+- Date formatting and proper headers
+
+**Response**: CSV file download
+
+---
+
+### **EPIC F-14: Bulk Operations**
+**Endpoints**:
+- `POST /api/facilitator/enrollments/bulk` - Bulk enroll participants
+
+**Functionality**:
+- Enroll multiple participants at once
+- Returns success/failure counts and error details
+- Handles individual failures gracefully
+
+**Request Body** (`BulkEnrollmentDTO`):
+```json
+{
+  "participantIds": ["uuid1", "uuid2", ...]
+}
+```
+
+**Response** (`BulkEnrollmentResponseDTO`):
+```json
+{
+  "totalRequested": "number",
+  "successful": "number",
+  "failed": "number",
+  "errors": [{"participantId": "uuid", "reason": "string"}]
+}
+```
+
+---
+
+### **EPIC F-15: Reports & Analytics**
+**Endpoints**:
+- `GET /api/facilitator/reports/attendance-trends?startDate={date}&endDate={date}` - Attendance trends
+- `GET /api/facilitator/reports/grade-trends?moduleId={id}` - Grade trends
+- `GET /api/facilitator/reports/participant-progress?participantId={id}` - Participant progress
+- `GET /api/facilitator/reports/cohort-performance` - Cohort performance summary
+
+**Functionality**:
+- **Attendance Trends**: Daily attendance breakdown with rates and status counts
+- **Grade Trends**: Assessment trends over time with averages
+- **Participant Progress**: Individual participant progress across all modules
+- **Cohort Performance**: Comprehensive performance summary with top performers and needs attention
+
+**Response**: Various DTOs with detailed analytics
+
+---
+
+### **EPIC F-16: Notifications Integration**
+**Endpoints**:
+- `POST /api/facilitator/notifications/send` - Send notifications to participants
+- `GET /api/facilitator/notifications` - Get facilitator notifications
+- `PUT /api/facilitator/notifications/{notificationId}/read` - Mark notification as read
+
+**Functionality**:
+- Send notifications/messages to participants
+- View facilitator's notifications
+- Mark notifications as read
+- Integrated with existing notification system
+
+**Request Body** (`SendNotificationDTO`):
+```json
+{
+  "participantIds": ["uuid1", "uuid2"],
+  "title": "string",
+  "message": "string",
+  "priority": "LOW|MEDIUM|HIGH|URGENT"
+}
+```
+
+---
+
+### **EPIC F-17: Attendance Enhancements**
+**Endpoints**:
+- `GET /api/facilitator/attendance/history?moduleId={id}&startDate={date}&endDate={date}` - Historical attendance
+- `PUT /api/facilitator/attendance/{attendanceId}` - Update/correct attendance
+
+**Functionality**:
+- View historical attendance records for date ranges
+- Update/correct existing attendance records
+- Track attendance patterns and trends
+
+**Request Body** (`UpdateAttendanceDTO`):
+```json
+{
+  "enrollmentId": "uuid",
+  "moduleId": "uuid",
+  "sessionDate": "YYYY-MM-DD",
+  "status": "PRESENT|ABSENT|LATE|EXCUSED"
+}
+```
+
+**Validations**:
+- ✅ Attendance must belong to facilitator's active cohort
+- ✅ Enrollment and module must match
+
+---
+
+### **EPIC F-18: Participant Communication**
+**Endpoints**:
+- Implemented via notification system (`POST /api/facilitator/notifications/send`)
+
+**Functionality**:
+- Send messages/notifications to participants
+- View communication history (via notifications)
+- Integrated with notification infrastructure
+
+---
+
+### **EPIC F-19: Participant Outcomes Management**
+**Endpoints**:
+- `GET /api/facilitator/outcomes/stats` - Get outcome statistics
+- `GET /api/facilitator/outcomes` - Get all participant outcomes
+- `POST /api/facilitator/outcomes` - Create/update participant outcome
+- `PUT /api/facilitator/outcomes/{outcomeId}` - Update specific outcome
+
+**Functionality**:
+- Track participant employment outcomes
+- Dashboard summary with success metrics
+- Update employment status (EMPLOYED, INTERNSHIP, TRAINING, etc.)
+
+**Request Body** (`UpdateOutcomeRequestDTO`):
+```json
+{
+  "participantId": "uuid",
+  "outcomeStatus": "EMPLOYED|INTERNSHIP|TRAINING|UNEMPLOYED|SELF_EMPLOYED|FURTHER_EDUCATION",
+  "companyName": "string",
+  "positionTitle": "string",
+  "startDate": "YYYY-MM-DD",
+  "monthlyAmount": "number",
+  "employmentType": "FULL_TIME|PART_TIME|CONTRACT|FREELANCE|INTERNSHIP"
+}
+```
+
+**Validations**:
+- ✅ Company name and position required for EMPLOYED/INTERNSHIP
+- ✅ Employment type required for EMPLOYED/INTERNSHIP
+- ✅ TRAINING status allows null company/position
+
+**Response**:
+- `OutcomeStatsDTO` - Dashboard statistics
+- `List<ParticipantOutcomeDTO>` - Participant outcome records
+- `ParticipantOutcomeDTO` - Individual outcome record
+
+---
+
+### **EPIC F-20: Participant List & Statistics**
+**Endpoints**:
+- `GET /api/facilitator/participants/list` - Get paginated participant list
+- `GET /api/facilitator/participants/statistics` - Get participant statistics
+- `GET /api/facilitator/participants/{participantId}/detail` - Get participant detail
+- `PUT /api/facilitator/participants/enrollments/{enrollmentId}/status` - Update enrollment status
+
+**Functionality**:
+- Paginated, searchable, filterable participant list
+- Search by name, email, phone
+- Filter by status, gender
+- Sort by attendance, status, name
+- Participant statistics (active/inactive counts, gender distribution)
+- Detailed participant view with attendance percentage
+- Manual enrollment status updates (DROPPED_OUT, WITHDRAWN)
+
+**Request Parameters** (`ParticipantListRequestDTO`):
+- `page` (default: 0)
+- `size` (default: 10)
+- `search` (optional)
+- `sortBy` (default: "firstName")
+- `sortDirection` (default: "ASC")
+- `enrollmentStatusFilter` (optional)
+- `genderFilter` (optional)
+
+**Response**:
+- `ParticipantListResponseDTO` - Paginated list with metadata
+- `ParticipantStatisticsDTO` - Statistics summary
+- `ParticipantDetailDTO` - Detailed participant view
+
+---
+
+### **EPIC F-21: Today's Attendance Management**
+**Endpoints**:
+- `GET /api/facilitator/attendance/today/stats?moduleId={id}` - Today's attendance statistics
+- `GET /api/facilitator/attendance/today/list?moduleId={id}` - Today's attendance list
+- `POST /api/facilitator/attendance/today/record` - Record/update today's attendance
+
+**Functionality**:
+- View today's attendance statistics (PRESENT, ABSENT, LATE, EXCUSED counts)
+- View today's attendance list with check-in times
+- Record attendance with time-based logic:
+  - **PRESENT button**: Sets PRESENT (before threshold) or LATE (at/after threshold)
+  - **ABSENT button**: Sets ABSENT (no reason) or EXCUSED (with reason)
+- Configurable on-time threshold (default: 9 AM CAT, configurable by ME_OFFICER)
+
+**Request Body** (`RecordTodayAttendanceDTO`):
+```json
+{
+  "enrollmentId": "uuid",
+  "moduleId": "uuid",
+  "action": "PRESENT|ABSENT",
+  "hasReason": "boolean",
+  "reason": "string"
+}
+```
+
+---
+
+### **EPIC F-22: Grade Tracking & Management**
+**Endpoints**:
+- `GET /api/facilitator/scores/stats?moduleId={id}` - Grade statistics
+- `GET /api/facilitator/scores/high-performers?moduleId={id}` - High performers list
+- `GET /api/facilitator/scores/need-attention?moduleId={id}` - Need attention list
+- `GET /api/facilitator/scores/search?moduleId={id}&name={name}` - Search participant grades
+- `GET /api/facilitator/scores/participants/{enrollmentId}/detail?moduleId={id}` - Participant grade detail
+
+**Functionality**:
+- Class average calculation
+- High performers identification (>= 80%)
+- Need attention identification (<= 60%)
+- Search participants by name
+- Individual participant grade details with all assessments
+- Missing assessments tracking
+
+**Response**:
+- `GradeStatsDTO` - Statistics summary
+- `List<ParticipantGradeSummaryDTO>` - Participant summaries
+- `ParticipantGradeDetailDTO` - Detailed grade view with all assessments
+
+**Features**:
+- ✅ `max_score` and `assessment_date` support
+- ✅ Prioritizes `assessment_date` over `created_at` for display
+- ✅ Missing assessments count
+
+---
+
+### **EPIC F-23: Survey Management (Enhanced)**
+**Endpoints** (Additional to F-9):
+- `GET /api/facilitator/surveys/stats` - Survey statistics
+- `GET /api/facilitator/surveys/overview` - Survey overview cards
+- `GET /api/facilitator/surveys/pending-responses` - Pending responses
+- `POST /api/facilitator/surveys/send-reminders` - Send reminders
+
+**Functionality**:
+- Survey statistics dashboard (active, completed, pending responses, average response rate)
+- Survey overview with cards showing status, response rates, completion progress
+- Pending responses tracking with days remaining
+- Send reminders to participants (placeholder for email integration)
+
+**Response**:
+- `SurveyStatsDTO` - Statistics summary
+- `SurveyOverviewResponseDTO` - Survey cards list
+- `PendingResponsesResponseDTO` - Pending responses list
+
+---
+
 ## 🔧 Other Application Functionalities
 
 ### **Authentication & Authorization**
@@ -440,22 +766,26 @@ The **DSE M&E (Monitoring & Evaluation) Platform** is a multi-tenant digital sys
 - Performance metrics
 - Exportable reports (CSV/PDF)
 
-#### **Reporting Module** (Not Yet Implemented)
-- `GET /api/reports` - Generate reports
-- Exportable reports (CSV/PDF)
-- Automated scheduled reports (weekly/monthly)
-- Custom report generation
+#### **Reporting Module** ✅ **IMPLEMENTED**
+- `GET /api/facilitator/reports/attendance-trends` - Attendance trends
+- `GET /api/facilitator/reports/grade-trends` - Grade trends
+- `GET /api/facilitator/reports/participant-progress` - Participant progress
+- `GET /api/facilitator/reports/cohort-performance` - Cohort performance
+- Exportable reports (CSV) ✅
+- Automated scheduled reports (planned for future)
 
-#### **Employment Tracking** (Not Yet Implemented)
-- `POST /api/employments` - Record employment outcomes
-- Track job placements
-- Measure program impact
-- Employment status updates
+#### **Employment Tracking** ✅ **IMPLEMENTED**
+- `POST /api/facilitator/outcomes` - Record employment outcomes
+- `GET /api/facilitator/outcomes` - View outcomes
+- Track job placements ✅
+- Measure program impact ✅
+- Employment status updates ✅
+- Dashboard statistics ✅
 
-#### **Internship Tracking** (Not Yet Implemented)
-- `POST /api/internships` - Record internship placements
-- Track internship outcomes
-- Measure program impact
+#### **Internship Tracking** ✅ **IMPLEMENTED**
+- Database tables created (`internships` table)
+- Models and enums created
+- Integration with employment outcomes ✅
 
 ---
 
@@ -463,20 +793,101 @@ The **DSE M&E (Monitoring & Evaluation) Platform** is a multi-tenant digital sys
 
 ### **Facilitator Endpoints** (All require `ROLE.FACILITATOR`)
 
+#### **Participant Management**
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
 | POST | `/api/facilitator/participants` | Create participant | ✅ |
 | PUT | `/api/facilitator/participants/{id}` | Update participant | ✅ |
 | GET | `/api/facilitator/participants/{id}` | Get participant | ✅ |
+| GET | `/api/facilitator/participants/list` | Get paginated participant list | ✅ |
+| GET | `/api/facilitator/participants/statistics` | Get participant statistics | ✅ |
+| GET | `/api/facilitator/participants/{id}/detail` | Get participant detail | ✅ |
+| PUT | `/api/facilitator/participants/enrollments/{enrollmentId}/status` | Update enrollment status | ✅ |
+
+#### **Enrollment Management**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | POST | `/api/facilitator/enrollments` | Enroll participant | ✅ |
+| POST | `/api/facilitator/enrollments/bulk` | Bulk enroll participants | ✅ |
+
+#### **Training Module Management**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | POST | `/api/facilitator/modules` | Create training module | ✅ |
+| GET | `/api/facilitator/modules` | List training modules | ✅ |
+| GET | `/api/facilitator/modules/{id}` | Get module details | ✅ |
+| PUT | `/api/facilitator/modules/{id}` | Update module | ✅ |
+| DELETE | `/api/facilitator/modules/{id}` | Delete module | ✅ |
+
+#### **Attendance Management**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | POST | `/api/facilitator/attendance` | Record attendance | ✅ |
+| GET | `/api/facilitator/attendance/today/stats?moduleId={id}` | Today's attendance stats | ✅ |
+| GET | `/api/facilitator/attendance/today/list?moduleId={id}` | Today's attendance list | ✅ |
+| POST | `/api/facilitator/attendance/today/record` | Record today's attendance | ✅ |
+| GET | `/api/facilitator/attendance/history?moduleId={id}&startDate={date}&endDate={date}` | Historical attendance | ✅ |
+| PUT | `/api/facilitator/attendance/{attendanceId}` | Update attendance record | ✅ |
+
+#### **Grade/Score Management**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | POST | `/api/facilitator/scores` | Upload scores | ✅ |
+| GET | `/api/facilitator/scores/stats?moduleId={id}` | Grade statistics | ✅ |
+| GET | `/api/facilitator/scores/high-performers?moduleId={id}` | High performers list | ✅ |
+| GET | `/api/facilitator/scores/need-attention?moduleId={id}` | Need attention list | ✅ |
+| GET | `/api/facilitator/scores/search?moduleId={id}&name={name}` | Search participant grades | ✅ |
+| GET | `/api/facilitator/scores/participants/{enrollmentId}/detail?moduleId={id}` | Participant grade detail | ✅ |
+
+#### **Survey Management**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | POST | `/api/facilitator/surveys/send` | Send survey | ✅ |
 | GET | `/api/facilitator/surveys/{id}/responses` | Get survey responses | ✅ |
 | GET | `/api/facilitator/surveys/responses` | Get all cohort responses | ✅ |
 | GET | `/api/facilitator/surveys/responses/{id}` | Get specific response | ✅ |
+| GET | `/api/facilitator/surveys/{id}/detail` | Get survey detail | ✅ |
+| GET | `/api/facilitator/surveys/stats` | Survey statistics | ✅ |
+| GET | `/api/facilitator/surveys/overview` | Survey overview | ✅ |
+| GET | `/api/facilitator/surveys/pending-responses` | Pending responses | ✅ |
+| POST | `/api/facilitator/surveys/send-reminders` | Send reminders | ✅ |
+
+#### **Dashboard & Reports**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | GET | `/api/facilitator/dashboard` | Get dashboard data | ✅ |
+| GET | `/api/facilitator/reports/attendance-trends?startDate={date}&endDate={date}` | Attendance trends | ✅ |
+| GET | `/api/facilitator/reports/grade-trends?moduleId={id}` | Grade trends | ✅ |
+| GET | `/api/facilitator/reports/participant-progress?participantId={id}` | Participant progress | ✅ |
+| GET | `/api/facilitator/reports/cohort-performance` | Cohort performance | ✅ |
+
+#### **Export Functionality**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/facilitator/export/participants` | Export participants (CSV) | ✅ |
+| GET | `/api/facilitator/export/attendance?moduleId={id}&startDate={date}&endDate={date}` | Export attendance (CSV) | ✅ |
+| GET | `/api/facilitator/export/grades?moduleId={id}` | Export grades (CSV) | ✅ |
+| GET | `/api/facilitator/export/outcomes` | Export outcomes (CSV) | ✅ |
+| GET | `/api/facilitator/export/surveys/{surveyId}` | Export survey responses (CSV) | ✅ |
+
+#### **Notifications**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/facilitator/notifications/send` | Send notifications | ✅ |
+| GET | `/api/facilitator/notifications` | Get notifications | ✅ |
+| PUT | `/api/facilitator/notifications/{id}/read` | Mark as read | ✅ |
+
+#### **Participant Outcomes**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/facilitator/outcomes/stats` | Outcome statistics | ✅ |
+| GET | `/api/facilitator/outcomes` | Get all outcomes | ✅ |
+| POST | `/api/facilitator/outcomes` | Create/update outcome | ✅ |
+| PUT | `/api/facilitator/outcomes/{outcomeId}` | Update outcome | ✅ |
+
+#### **Testing**
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
 | GET | `/api/facilitator/test/context` | Test facilitator context | ✅ |
 
 ### **Authentication Endpoints** (Public)
@@ -652,12 +1063,19 @@ The **DSE M&E (Monitoring & Evaluation) Platform** is a multi-tenant digital sys
 - ⚠️ **Internship tracking**
 
 ### **Total Endpoints**
-- **Facilitator**: 13 endpoints ✅
+- **Facilitator**: 50+ endpoints ✅
 - **Authentication**: 7 endpoints ✅
 - **User Management**: 3 endpoints ✅
 - **Other**: 2 endpoints ✅
-- **Total Implemented**: 25 endpoints
-- **Total Planned**: ~15-20 additional endpoints
+- **Total Implemented**: 62+ endpoints
+- **Total Planned**: ~10-15 additional endpoints (ME_OFFICER, PARTNER roles)
+
+### **Swagger/OpenAPI Documentation**
+- ✅ All facilitator endpoints documented with `@Tag`, `@Operation`, `@ApiResponse` annotations
+- ✅ Parameter documentation with `@Parameter`
+- ✅ Response code documentation
+- ✅ API grouping by functionality
+- ✅ Swagger UI available at `/swagger-ui.html` (when OpenAPI dependency is present)
 
 ---
 
@@ -707,7 +1125,89 @@ The **DSE M&E (Monitoring & Evaluation) Platform** is a multi-tenant digital sys
 
 ---
 
+---
+
+## 📚 Recent Changes & Updates
+
+### **Database Migrations**
+- ✅ `V27__update_employment_status_enum.sql` - Added INTERNSHIP and TRAINING to employment status
+- ✅ `V28__add_monthly_amount_to_employment_outcomes.sql` - Added monthly_amount column
+- ✅ `V24__create_audit_logs_table.sql` - Audit logs table
+- ✅ `V25__create_internships_table.sql` - Internships table
+- ✅ `V26__create_employment_outcomes_table.sql` - Employment outcomes table
+
+### **New Services**
+- ✅ `ExportService.java` - CSV export functionality
+- ✅ `ReportsService.java` - Reports and analytics
+- ✅ `FacilitatorNotificationService.java` - Notification management
+- ✅ `ParticipantOutcomeService.java` - Outcome tracking
+- ✅ `ParticipantListService.java` - Paginated participant lists
+- ✅ `TodayAttendanceService.java` - Today's attendance management
+- ✅ `GradeTrackingService.java` - Grade analytics
+- ✅ `SurveyStatsService.java` - Survey statistics
+- ✅ `EnrollmentStatusService.java` - Enrollment status management
+
+### **Enhanced Services**
+- ✅ `TrainingModuleService.java` - Added list, get, update, delete methods
+- ✅ `AttendanceService.java` - Added historical view and update methods
+- ✅ `EnrollmentService.java` - Added bulk enrollment
+- ✅ `SurveyService.java` - Added detail view, overview, pending responses
+- ✅ `ParticipantService.java` - Added list, statistics, detail, status update
+- ✅ `ScoreService.java` - Enhanced with max_score and assessment_date support
+
+### **New Controllers**
+- ✅ `ExportController.java` - Export endpoints
+- ✅ `ReportsController.java` - Reports and analytics endpoints
+- ✅ `FacilitatorNotificationController.java` - Notification endpoints
+- ✅ `ParticipantOutcomeController.java` - Outcome endpoints
+
+### **Enhanced Controllers**
+- ✅ All controllers now have Swagger documentation (`@Tag`, `@Operation`, `@ApiResponse`)
+- ✅ `TrainingModuleController.java` - Added list, get, update, delete
+- ✅ `SurveyController.java` - Added detail endpoint
+- ✅ `EnrollmentController.java` - Added bulk enrollment
+- ✅ `AttendanceController.java` - Added historical view and update
+- ✅ `ParticipantController.java` - Added list, statistics, detail, status update
+- ✅ `ScoreController.java` - Added stats, high performers, need attention, search, detail
+
+### **New DTOs**
+- ✅ `UpdateTrainingModuleDTO.java`
+- ✅ `BulkEnrollmentDTO.java`, `BulkEnrollmentResponseDTO.java`
+- ✅ `AttendanceTrendDTO.java`, `GradeTrendDTO.java`, `ParticipantProgressDTO.java`, `CohortPerformanceDTO.java`
+- ✅ `HistoricalAttendanceDTO.java`, `UpdateAttendanceDTO.java`
+- ✅ `SendNotificationDTO.java`
+- ✅ `OutcomeStatsDTO.java`, `ParticipantOutcomeDTO.java`, `UpdateOutcomeRequestDTO.java`
+- ✅ `ParticipantListRequestDTO.java`, `ParticipantListResponseDTO.java`, `ParticipantListDTO.java`
+- ✅ `ParticipantDetailDTO.java`, `ParticipantStatisticsDTO.java`
+- ✅ `TodayAttendanceStatsDTO.java`, `TodayAttendanceListDTO.java`, `RecordTodayAttendanceDTO.java`
+- ✅ `GradeStatsDTO.java`, `ParticipantGradeSummaryDTO.java`, `ParticipantGradeDetailDTO.java`
+- ✅ `SurveyStatsDTO.java`, `SurveyCardDTO.java`, `SurveyOverviewResponseDTO.java`
+- ✅ `PendingResponseDTO.java`, `PendingResponsesResponseDTO.java`, `SendRemindersDTO.java`
+- ✅ `SurveyDetailDTO.java`, `QuestionDTO.java`, `ParticipantStatusDTO.java`, `SurveyDetailResponseDTO.java`
+
+### **Model Updates**
+- ✅ `EmploymentOutcome.java` - Added `monthlyAmount` field
+- ✅ `Score.java` - Added `maxScore` and `assessmentDate` fields
+- ✅ `Center.java` - Added `onTimeThreshold` field (for attendance time-based logic)
+- ✅ `Survey.java` - Added `startDate` and `endDate` fields
+
+### **Repository Updates**
+- ✅ `AttendanceRepository.java` - Added `findByEnrollmentIdInAndModuleIdAndSessionDateBetween`, `findByEnrollmentId`
+- ✅ `EmploymentOutcomeRepository.java` - New repository with cohort-based queries
+
+### **Enums**
+- ✅ `EmploymentStatus.java` - Added INTERNSHIP and TRAINING
+- ✅ `InternshipStatus.java` - New enum (PENDING, ACTIVE, COMPLETED, TERMINATED)
+- ✅ `EmploymentType.java` - New enum (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
+
+### **Security Enhancements**
+- ✅ OAuth2 conditional configuration (only enabled if environment variables present)
+- ✅ Form login preserved alongside OAuth2
+- ✅ Default login page with automatic OAuth2 link generation
+
+---
+
 **Last Updated**: 2025-12-28
-**Version**: 1.0.0
-**Status**: Facilitator module fully implemented, other roles in planning phase
+**Version**: 2.0.0
+**Status**: Facilitator module fully implemented with all enhancements, Swagger documentation complete, ready for production
 

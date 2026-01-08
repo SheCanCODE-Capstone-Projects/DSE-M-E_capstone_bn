@@ -2,6 +2,7 @@ package com.dseme.app.services.facilitator;
 
 import com.dseme.app.dtos.facilitator.CreateTrainingModuleDTO;
 import com.dseme.app.dtos.facilitator.FacilitatorContext;
+import com.dseme.app.dtos.facilitator.UpdateTrainingModuleDTO;
 import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.models.Cohort;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -171,6 +173,111 @@ public class TrainingModuleService {
         }
 
         return module;
+    }
+
+    /**
+     * Gets all training modules for facilitator's active cohort's program.
+     * 
+     * @param context Facilitator context
+     * @return List of training modules
+     */
+    @Transactional(readOnly = true)
+    public List<TrainingModule> getTrainingModules(FacilitatorContext context) {
+        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+        return trainingModuleRepository.findByProgramId(activeCohort.getProgram().getId());
+    }
+
+    /**
+     * Gets a specific training module by ID.
+     * 
+     * @param context Facilitator context
+     * @param moduleId Module ID
+     * @return Training module
+     */
+    @Transactional(readOnly = true)
+    public TrainingModule getTrainingModuleById(FacilitatorContext context, UUID moduleId) {
+        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+        
+        TrainingModule module = trainingModuleRepository.findById(moduleId)
+                .orElseThrow(() -> new AccessDeniedException("Training module not found"));
+        
+        // Validate module belongs to facilitator's active cohort's program
+        if (!module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
+            throw new AccessDeniedException(
+                "Access denied. Module does not belong to your active cohort's program."
+            );
+        }
+        
+        return module;
+    }
+
+    /**
+     * Updates a training module.
+     * 
+     * Rules:
+     * - Module must belong to facilitator's active cohort's program
+     * - Facilitator must be the creator
+     * - Cohort must still be active
+     * 
+     * @param context Facilitator context
+     * @param moduleId Module ID
+     * @param dto Update data
+     * @return Updated training module
+     */
+    public TrainingModule updateTrainingModule(FacilitatorContext context, UUID moduleId, UpdateTrainingModuleDTO dto) {
+        // Validate edit access
+        TrainingModule module = validateModuleEditAccess(context, moduleId);
+        
+        // Update fields
+        if (dto.getModuleName() != null) {
+            module.setModuleName(dto.getModuleName());
+        }
+        if (dto.getDescription() != null) {
+            module.setDescription(dto.getDescription());
+        }
+        if (dto.getSequenceOrder() != null) {
+            module.setSequenceOrder(dto.getSequenceOrder());
+        }
+        if (dto.getDurationHours() != null) {
+            module.setDurationHours(dto.getDurationHours());
+        }
+        if (dto.getIsMandatory() != null) {
+            module.setIsMandatory(dto.getIsMandatory());
+        }
+        
+        return trainingModuleRepository.save(module);
+    }
+
+    /**
+     * Deletes a training module.
+     * 
+     * Rules:
+     * - Module must belong to facilitator's active cohort's program
+     * - Facilitator must be the creator
+     * - Cohort must still be active
+     * - Module must not have any attendance or score records
+     * 
+     * @param context Facilitator context
+     * @param moduleId Module ID
+     */
+    public void deleteTrainingModule(FacilitatorContext context, UUID moduleId) {
+        // Validate edit access
+        TrainingModule module = validateModuleEditAccess(context, moduleId);
+        
+        // Check if module has attendance or score records
+        if (!module.getAttendances().isEmpty()) {
+            throw new AccessDeniedException(
+                "Cannot delete module. Module has attendance records. Please remove attendance records first."
+            );
+        }
+        
+        if (!module.getScores().isEmpty()) {
+            throw new AccessDeniedException(
+                "Cannot delete module. Module has score records. Please remove score records first."
+            );
+        }
+        
+        trainingModuleRepository.delete(module);
     }
 }
 

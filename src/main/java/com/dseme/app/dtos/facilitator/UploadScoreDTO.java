@@ -54,6 +54,19 @@ public class UploadScoreDTO {
         @DecimalMin(value = "0.0", message = "Score must be at least 0")
         @DecimalMax(value = "100.0", message = "Score must be at most 100")
         private BigDecimal scoreValue;
+
+        /**
+         * Maximum possible score for this assessment.
+         * Optional, defaults to 100.0 if not provided.
+         */
+        private java.math.BigDecimal maxScore;
+
+        /**
+         * Date when the assessment was conducted.
+         * Optional, but recommended for consistency.
+         * If not provided, will use current date.
+         */
+        private java.time.LocalDate assessmentDate;
     }
 }
 

@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * DTO for updating enrollment status.
  * Used by facilitators to manually change enrollment status (DROPPED_OUT, WITHDRAWN).

@@ -244,16 +244,35 @@ public class GradeTrackingService {
 
         // Build assessment score DTOs
         List<ParticipantGradeDetailDTO.AssessmentScoreDTO> assessmentDTOs = participantScores.stream()
-                .map(score -> ParticipantGradeDetailDTO.AssessmentScoreDTO.builder()
-                        .scoreId(score.getId())
-                        .assessmentType(score.getAssessmentType())
-                        .assessmentName(score.getAssessmentName())
-                        .score(score.getScoreValue())
-                        .recordedAt(score.getRecordedAt())
-                        .moduleId(module.getId())
-                        .moduleName(module.getModuleName())
-                        .build())
-                .sorted(Comparator.comparing(ParticipantGradeDetailDTO.AssessmentScoreDTO::getRecordedAt).reversed())
+                .map(score -> {
+                    // Prioritize assessmentDate over recordedAt for display
+                    java.time.LocalDate assessmentDate = score.getAssessmentDate();
+                    if (assessmentDate == null && score.getRecordedAt() != null) {
+                        // Fallback to recordedAt date if assessmentDate is null
+                        assessmentDate = score.getRecordedAt()
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate();
+                    }
+                    
+                    return ParticipantGradeDetailDTO.AssessmentScoreDTO.builder()
+                            .scoreId(score.getId())
+                            .assessmentType(score.getAssessmentType())
+                            .assessmentName(score.getAssessmentName())
+                            .score(score.getScoreValue())
+                            .maxScore(score.getMaxScore())
+                            .assessmentDate(assessmentDate) // Prioritized date
+                            .recordedAt(score.getRecordedAt()) // Fallback timestamp
+                            .moduleId(module.getId())
+                            .moduleName(module.getModuleName())
+                            .build();
+                })
+                .sorted(Comparator.comparing(
+                        (ParticipantGradeDetailDTO.AssessmentScoreDTO dto) -> 
+                                dto.getAssessmentDate() != null ? dto.getAssessmentDate() :
+                                (dto.getRecordedAt() != null ? 
+                                        dto.getRecordedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDate() :
+                                        java.time.LocalDate.MIN)
+                ).reversed())
                 .collect(Collectors.toList());
 
         // Get display status

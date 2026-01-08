@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +62,16 @@ public class ParticipantGradeDetailDTO {
         private AssessmentType assessmentType;
         private String assessmentName;
         private BigDecimal score;
-        private Instant recordedAt; // Date when score was recorded
+        private BigDecimal maxScore; // Maximum possible score
+        /**
+         * Assessment date (prioritized over recordedAt for display).
+         * Falls back to recordedAt date if assessmentDate is null.
+         */
+        private LocalDate assessmentDate;
+        /**
+         * Recorded timestamp (fallback if assessmentDate is null).
+         */
+        private Instant recordedAt;
         private UUID moduleId;
         private String moduleName;
     }
