@@ -4,6 +4,11 @@ import com.dseme.app.dtos.facilitator.*;
 import com.dseme.app.models.Score;
 import com.dseme.app.services.facilitator.GradeTrackingService;
 import com.dseme.app.services.facilitator.ScoreService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +27,7 @@ import java.util.UUID;
  * - Role: FACILITATOR
  * - Active cohort assignment
  */
+@Tag(name = "Grade/Score Management", description = "APIs for managing grades and scores")
 @RestController
 @RequestMapping("/api/facilitator/scores")
 @RequiredArgsConstructor
