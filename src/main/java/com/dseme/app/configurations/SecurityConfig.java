@@ -1,6 +1,7 @@
 package com.dseme.app.configurations;
 import com.dseme.app.filters.FacilitatorAuthorizationFilter;
 import com.dseme.app.filters.JwtAuthenticationFilter;
+import com.dseme.app.filters.MEOfficerAuthorizationFilter;
 import com.dseme.app.services.auth.CustomOAuth2FailureHandler;
 import com.dseme.app.services.auth.CustomOAuth2SuccessHandler;
 import com.dseme.app.services.auth.CustomOAuth2UserService;
@@ -43,6 +44,7 @@ public class SecurityConfig {
     private final UserDetailService userDetailService;
     private final JwtAuthenticationFilter authenticationJwtTokenFilter;
     private final FacilitatorAuthorizationFilter facilitatorAuthorizationFilter;
+    private final MEOfficerAuthorizationFilter meOfficerAuthorizationFilter;
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -141,6 +143,7 @@ public class SecurityConfig {
                                 "/oauth2/**"
                         ).permitAll()
                         .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR") // Only FACILITATOR role can access
+                        .requestMatchers("/api/me-officer/**").hasRole("ME_OFFICER") // Only ME_OFFICER role can access
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -166,8 +169,9 @@ public class SecurityConfig {
         
         // JWT authentication filter runs first to extract and validate JWT
         http.addFilterBefore(authenticationJwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
-                // Facilitator authorization filter runs after JWT auth to validate facilitator access
-                .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class);
+                // Authorization filters run after JWT auth to validate role-specific access
+                .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(meOfficerAuthorizationFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
