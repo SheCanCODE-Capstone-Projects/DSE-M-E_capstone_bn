@@ -4,6 +4,11 @@ import com.dseme.app.dtos.facilitator.*;
 import com.dseme.app.models.Enrollment;
 import com.dseme.app.services.facilitator.ParticipantListService;
 import com.dseme.app.services.facilitator.ParticipantService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +26,7 @@ import java.util.UUID;
  * - Role: FACILITATOR
  * - Active cohort assignment
  */
+@Tag(name = "Participant Management", description = "APIs for managing participants")
 @RestController
 @RequestMapping("/api/facilitator/participants")
 @RequiredArgsConstructor
@@ -33,18 +39,17 @@ public class ParticipantController extends FacilitatorBaseController {
      * Creates a new participant profile and enrolls them in the facilitator's active cohort.
      * 
      * POST /api/facilitator/participants
-     * 
-     * Rules:
-     * - Participant must not already exist (by email)
-     * - Participant must not have any existing enrollment
-     * - Participant is assigned to facilitator's partner
-     * - Participant is enrolled in facilitator's active cohort
-     * - Enrollment status is set to ENROLLED
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param dto Participant creation data
-     * @return Created participant
      */
+    @Operation(
+        summary = "Create participant",
+        description = "Creates a new participant profile and automatically enrolls them in the facilitator's active cohort."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Participant created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "409", description = "Participant already exists")
+    })
     @PostMapping
     public ResponseEntity<ParticipantResponseDTO> createParticipant(
             HttpServletRequest request,
@@ -61,23 +66,21 @@ public class ParticipantController extends FacilitatorBaseController {
      * Updates a participant profile.
      * 
      * PUT /api/facilitator/participants/{participantId}
-     * 
-     * Rules:
-     * - Participant must exist
-     * - Participant must belong to facilitator's cohort
-     * - Participant must belong to facilitator's center
-     * - Only editable fields can be updated: firstName, lastName, gender, disabilityStatus, dateOfBirth
-     * - Immutable fields: partner, cohort, status, verification flags
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param participantId Participant ID to update
-     * @param dto Update data (only editable fields)
-     * @return Updated participant
      */
+    @Operation(
+        summary = "Update participant",
+        description = "Updates participant profile. Only editable fields can be updated (firstName, lastName, gender, disabilityStatus, dateOfBirth)."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Participant updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Participant not found")
+    })
     @PutMapping("/{participantId}")
     public ResponseEntity<ParticipantResponseDTO> updateParticipant(
             HttpServletRequest request,
-            @PathVariable UUID participantId,
+            @Parameter(description = "Participant ID") @PathVariable UUID participantId,
             @Valid @RequestBody UpdateParticipantDTO dto
     ) {
         FacilitatorContext context = getFacilitatorContext(request);
@@ -91,11 +94,16 @@ public class ParticipantController extends FacilitatorBaseController {
      * Gets a participant by ID.
      * 
      * GET /api/facilitator/participants/{participantId}
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param participantId Participant ID
-     * @return Participant
      */
+    @Operation(
+        summary = "Get participant by ID",
+        description = "Retrieves a participant by ID. Participant must belong to facilitator's active cohort."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Participant retrieved successfully"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Participant not found")
+    })
     @GetMapping("/{participantId}")
     public ResponseEntity<ParticipantResponseDTO> getParticipant(
             HttpServletRequest request,
@@ -112,14 +120,16 @@ public class ParticipantController extends FacilitatorBaseController {
      * Gets detailed participant information by ID.
      * 
      * GET /api/facilitator/participants/{participantId}/detail
-     * 
-     * Returns: firstName, lastName, email, phone, gender, disabilityStatus, 
-     *          cohortName, enrollmentStatus, attendancePercentage
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param participantId Participant ID
-     * @return Participant detail
      */
+    @Operation(
+        summary = "Get participant detail",
+        description = "Retrieves detailed participant information including cohort name, enrollment status, and attendance percentage."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Participant detail retrieved successfully"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Participant not found")
+    })
     @GetMapping("/{participantId}/detail")
     public ResponseEntity<ParticipantDetailDTO> getParticipantDetail(
             HttpServletRequest request,
@@ -136,20 +146,14 @@ public class ParticipantController extends FacilitatorBaseController {
      * Gets paginated list of participants with search, filter, and sort.
      * 
      * GET /api/facilitator/participants/list
-     * 
-     * Query Parameters:
-     * - page: Page number (default: 0)
-     * - size: Page size (default: 10)
-     * - search: Search term (name, email, phone)
-     * - sortBy: Sort field (firstName, lastName, email, phone, enrollmentDate, attendancePercentage, enrollmentStatus)
-     * - sortDirection: Sort direction (ASC, DESC)
-     * - enrollmentStatusFilter: Filter by status (ACTIVE, INACTIVE, COMPLETED, DROPPED_OUT, WITHDRAWN)
-     * - genderFilter: Filter by gender (MALE, FEMALE, OTHER)
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param listRequest List request parameters
-     * @return Paginated participant list
      */
+    @Operation(
+        summary = "Get participant list",
+        description = "Retrieves paginated list of participants with search, filter, and sort capabilities."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Participant list retrieved successfully")
+    })
     @GetMapping("/list")
     public ResponseEntity<ParticipantListResponseDTO> getAllParticipants(
             HttpServletRequest request,
@@ -166,10 +170,14 @@ public class ParticipantController extends FacilitatorBaseController {
      * Gets participant statistics (active/inactive counts, gender distribution).
      * 
      * GET /api/facilitator/participants/statistics
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @return Participant statistics
      */
+    @Operation(
+        summary = "Get participant statistics",
+        description = "Retrieves participant statistics including active/inactive counts and gender distribution."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully")
+    })
     @GetMapping("/statistics")
     public ResponseEntity<ParticipantStatisticsDTO> getParticipantStatistics(
             HttpServletRequest request
@@ -185,20 +193,21 @@ public class ParticipantController extends FacilitatorBaseController {
      * Updates enrollment status manually (DROPPED_OUT, WITHDRAWN).
      * 
      * PUT /api/facilitator/participants/enrollments/{enrollmentId}/status
-     * 
-     * Rules:
-     * - Only DROPPED_OUT and WITHDRAWN can be set by facilitator
-     * - Enrollment must belong to facilitator's active cohort
-     * 
-     * @param request HTTP request (contains FacilitatorContext)
-     * @param enrollmentId Enrollment ID
-     * @param dto Status update DTO
-     * @return Updated enrollment
      */
+    @Operation(
+        summary = "Update enrollment status",
+        description = "Manually updates enrollment status. Only DROPPED_OUT and WITHDRAWN can be set by facilitator."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Enrollment status updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Enrollment not found")
+    })
     @PutMapping("/enrollments/{enrollmentId}/status")
     public ResponseEntity<Enrollment> updateEnrollmentStatus(
             HttpServletRequest request,
-            @PathVariable UUID enrollmentId,
+            @Parameter(description = "Enrollment ID") @PathVariable UUID enrollmentId,
             @Valid @RequestBody UpdateEnrollmentStatusDTO dto
     ) {
         FacilitatorContext context = getFacilitatorContext(request);
