@@ -1,8 +1,17 @@
 package com.dseme.app.configurations;
+import com.dseme.app.filters.FacilitatorAuthorizationFilter;
 import com.dseme.app.filters.JwtAuthenticationFilter;
+import com.dseme.app.services.auth.CustomOAuth2FailureHandler;
+import com.dseme.app.services.auth.CustomOAuth2SuccessHandler;
+import com.dseme.app.services.auth.CustomOAuth2UserService;
 import com.dseme.app.services.users.UserDetailService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,19 +27,25 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import java.util.Arrays;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final UserDetailService userDetailService;
     private final JwtAuthenticationFilter authenticationJwtTokenFilter;
-
-    public SecurityConfig(UserDetailService userDetailService, JwtAuthenticationFilter authenticationJwtTokenFilter) {
-        this.userDetailService = userDetailService;
-        this.authenticationJwtTokenFilter = authenticationJwtTokenFilter;
-    }
+    private final FacilitatorAuthorizationFilter facilitatorAuthorizationFilter;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+    private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -45,13 +60,67 @@ public class SecurityConfig {
         return provider;
     }
 
+    /**
+     * Creates a ClientRegistrationRepository bean for OAuth2.
+     * Only creates the bean if OAuth2 credentials are configured via environment variables.
+     * If not configured, the bean won't be created and OAuth2 login will be disabled.
+     * 
+     * To enable Google OAuth2 login, set these environment variables:
+     * - GOOGLE_CLIENT_ID
+     * - GOOGLE_CLIENT_SECRET
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @ConditionalOnProperty(
+            prefix = "spring.oauth2.client.registration.google",
+            name = {"client-id", "client-secret"},
+            matchIfMissing = false
+    )
+    public ClientRegistrationRepository clientRegistrationRepository(
+            org.springframework.core.env.Environment environment) {
+        String clientId = environment.getProperty("spring.oauth2.client.registration.google.client-id");
+        String clientSecret = environment.getProperty("spring.oauth2.client.registration.google.client-secret");
+        
+        // Validate credentials are present and not empty
+        if (clientId == null || clientId.trim().isEmpty() || clientSecret == null || clientSecret.trim().isEmpty()) {
+            throw new IllegalStateException(
+                "OAuth2 Google credentials are required but not found. " +
+                "Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables."
+            );
+        }
 
+        // Spring Boot auto-configuration should handle this, but we provide a fallback
+        String redirectUri = environment.getProperty("spring.oauth2.client.registration.google.redirect-uri",
+                "http://localhost:8088/login/oauth2/code/google");
+
+        ClientRegistration registration = ClientRegistration
+                .withRegistrationId("google")
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri(redirectUri)
+                .scope("email", "profile")
+                .authorizationUri("https://accounts.google.com/o/oauth2/auth")
+                .tokenUri("https://oauth2.googleapis.com/token")
+                .userInfoUri("https://www.googleapis.com/oauth2/v2/userinfo")
+                .userNameAttributeName("id") // Google v2 userinfo returns 'id', not 'sub'
+                .clientName("Google")
+                .build();
+
+        log.info("✅ Google OAuth2 login configured successfully. Google sign-in button will appear on /login page.");
+        
+        return new InMemoryClientRegistrationRepository(registration);
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http, 
+            AuthenticationProvider authenticationProvider,
+            @Autowired(required = false) ClientRegistrationRepository clientRegistrationRepository) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authenticationProvider(authenticationProvider)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight requests
                         .requestMatchers(
@@ -62,20 +131,43 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/api/auth/verify",
                                 "/api/auth/resend-verification",
-                                "/api/auth/test-email",
+                                "/api/auth/google",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/login/**",
+                                "/oauth2/**"
                         ).permitAll()
+                        .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR") // Only FACILITATOR role can access
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // Allow sessions for form login and OAuth2
                 );
-
-        http.addFilterBefore(authenticationJwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        
+        // Configure form login first (uses default login page)
+        http.formLogin(Customizer.withDefaults());
+        
+        // Configure OAuth2 login if ClientRegistrationRepository bean is available
+        // Spring Security automatically adds OAuth2 login links to the default login page
+        // when OAuth2 is configured - no need to explicitly set loginPage
+        if (clientRegistrationRepository != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .defaultSuccessUrl("/", true) // Redirect after successful login
+                    .userInfoEndpoint(userInfo -> userInfo
+                            .userService(customOAuth2UserService)
+                    )
+                    .successHandler(customOAuth2SuccessHandler)
+                    .failureHandler(customOAuth2FailureHandler)
+            );
+        }
+        
+        // JWT authentication filter runs first to extract and validate JWT
+        http.addFilterBefore(authenticationJwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                // Facilitator authorization filter runs after JWT auth to validate facilitator access
+                .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

@@ -1,8 +1,10 @@
 package com.dseme.app.models;
 
+import com.dseme.app.enums.Provider;
 import com.dseme.app.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -34,7 +36,11 @@ public class User{
 
     @Builder.Default
     @Column(name = "is_active")
-    private Boolean isActive = false;
+    private Boolean isActive = true;
+
+    @Builder.Default
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
 
     @Column(name = "created_at")
     private Instant createdAt;
@@ -57,19 +63,9 @@ public class User{
     @JoinColumn(name = "center_id")
     private Center center;
 
-    @Column(name = "reset_token")
-    private String resetToken;
-
-    @Column(name = "reset_token_expiry")
-    private Instant resetTokenExpiry;
-
-    @Column(name = "expiry_date")
-    private Instant expiryDate;
-
-
-    @Builder.Default
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
+    @Column(name = "provider")
+    @Enumerated(EnumType.STRING)
+    private Provider provider;
 
     @PrePersist
     protected void onCreate() {

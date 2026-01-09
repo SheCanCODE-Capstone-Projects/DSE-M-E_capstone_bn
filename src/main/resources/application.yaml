@@ -1,8 +1,9 @@
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DATABASE_URL:${DB_URL}}
+    username: ${PGUSER:${DB_USERNAME}}
+    password: ${PGPASSWORD:${DB_PASSWORD}}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -36,12 +37,25 @@ spring:
             trust: smtp-relay.brevo.com
           auth.mechanisms: LOGIN PLAIN
 
+  oauth2:
+    client:
+      registration:
+        google:
+          client-id: ${GOOGLE_CLIENT_ID:}
+          client-secret: ${GOOGLE_CLIENT_SECRET:}
+          redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8088/login/oauth2/code/google}
+          scope:
+            - email
+            - profile
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
 
+
+
 server:
-  port: ${PORT}
+  port: ${PORT:8088}
 
 app:
   mail:

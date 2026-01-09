@@ -4,14 +4,12 @@ import com.dseme.app.dtos.auth.ForgotPasswordDTO;
 import com.dseme.app.dtos.auth.LoginDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.dtos.auth.ResetPasswordDTO;
+import com.dseme.app.enums.Provider;
 import com.dseme.app.enums.Role;
 import com.dseme.app.exceptions.AccountInactiveException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
-import com.dseme.app.models.EmailVerificationToken;
 import com.dseme.app.models.Forgotpassword;
 import com.dseme.app.models.User;
-import com.dseme.app.repositories.EmailVerificationTokenRepository;
-import com.dseme.app.services.auth.EmailVerificationService;
 import com.dseme.app.repositories.ForgotPasswordRepository;
 import com.dseme.app.repositories.UserRepository;
 import com.dseme.app.utilities.JwtUtil;
@@ -25,17 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Date;
-import java.util.UUID;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepo;
     private final ForgotPasswordRepository forgotPasswordRepo;
-    private final EmailVerificationTokenRepository tokenRepo;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -47,7 +41,6 @@ public class AuthService {
     public AuthService(
             UserRepository userRepo,
             ForgotPasswordRepository forgotPasswordRepo,
-            EmailVerificationTokenRepository tokenRepo,
             AuthenticationManager authenticationManager,
             JwtUtil jwtUtil,
             EmailService emailService,
@@ -55,7 +48,6 @@ public class AuthService {
     ) {
         this.userRepo = userRepo;
         this.forgotPasswordRepo = forgotPasswordRepo;
-        this.tokenRepo = tokenRepo;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.emailService = emailService;
@@ -78,6 +70,7 @@ public class AuthService {
         user.setRole(Role.UNASSIGNED);
         user.setIsActive(false);
         user.setIsVerified(false);
+        user.setProvider(Provider.LOCAL);
 
         User savedUser = userRepo.save(user);
         
