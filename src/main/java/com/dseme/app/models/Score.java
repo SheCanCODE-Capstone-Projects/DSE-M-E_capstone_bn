@@ -71,6 +71,17 @@ public class Score {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Builder.Default
+    @Column(name = "is_validated", nullable = false)
+    private Boolean isValidated = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "validated_by")
+    private User validatedBy;
+
+    @Column(name = "validated_at")
+    private Instant validatedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();

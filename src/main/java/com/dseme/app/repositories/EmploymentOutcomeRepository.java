@@ -3,6 +3,7 @@ package com.dseme.app.repositories;
 import com.dseme.app.enums.EmploymentStatus;
 import com.dseme.app.models.EmploymentOutcome;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -41,5 +42,18 @@ public interface EmploymentOutcomeRepository extends JpaRepository<EmploymentOut
      * Check if employment outcome exists for enrollment.
      */
     boolean existsByEnrollmentId(UUID enrollmentId);
+
+    /**
+     * Find employment outcome by ID and partner ID (through enrollment -> participant).
+     * Used to ensure partner-level isolation when accessing a specific employment outcome.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT eo FROM EmploymentOutcome eo WHERE eo.id = :employmentOutcomeId " +
+            "AND eo.enrollment.participant.partner.partnerId = :partnerId"
+    )
+    Optional<EmploymentOutcome> findByIdAndEnrollmentParticipantPartnerPartnerId(
+            @Param("employmentOutcomeId") UUID employmentOutcomeId,
+            @Param("partnerId") String partnerId
+    );
 }
 

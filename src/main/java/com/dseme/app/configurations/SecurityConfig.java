@@ -109,7 +109,7 @@ public class SecurityConfig {
                 .clientName("Google")
                 .build();
 
-        log.info("✅ Google OAuth2 login configured successfully. Google sign-in button will appear on /login page.");
+        log.info("Google OAuth2 login configured successfully. Google sign-in button will appear on /login page.");
         
         return new InMemoryClientRegistrationRepository(registration);
     }

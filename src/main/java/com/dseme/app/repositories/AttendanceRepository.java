@@ -117,5 +117,25 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
      * Used for calculating attendance percentage.
      */
     List<Attendance> findByEnrollmentId(UUID enrollmentId);
+
+    /**
+     * Find all attendance records for enrollments belonging to a specific partner.
+     * Used by ME_OFFICER to view attendance summaries.
+     */
+    @Query("SELECT a FROM Attendance a " +
+           "WHERE a.enrollment.participant.partner.partnerId = :partnerId")
+    List<Attendance> findByParticipantPartnerPartnerId(@Param("partnerId") String partnerId);
+
+    /**
+     * Find all attendance records for enrollments in a specific cohort belonging to a partner.
+     * Used by ME_OFFICER to view attendance summaries filtered by cohort.
+     */
+    @Query("SELECT a FROM Attendance a " +
+           "WHERE a.enrollment.participant.partner.partnerId = :partnerId " +
+           "AND a.enrollment.cohort.id = :cohortId")
+    List<Attendance> findByParticipantPartnerPartnerIdAndCohortId(
+            @Param("partnerId") String partnerId,
+            @Param("cohortId") UUID cohortId
+    );
 }
 

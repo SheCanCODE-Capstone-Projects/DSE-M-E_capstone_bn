@@ -69,6 +69,17 @@ public class Participant {
     private User createdBy;
 
     @Builder.Default
+    @Column(name = "is_verified", nullable = false)
+    private Boolean isVerified = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "verified_by")
+    private User verifiedBy;
+
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
+
+    @Builder.Default
     @OneToMany(mappedBy = "participant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Enrollment> enrollments = new ArrayList<>();
 
