@@ -1,5 +1,6 @@
 package com.dseme.app;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -9,10 +10,10 @@ public class App {
         // Load .env file
         Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
 
-        // Set environment properties for Spring Boot
-        System.setProperty("DB_URL", dotenv.get("DB_URL"));
-        System.setProperty("DB_USERNAME", dotenv.get("DB_USERNAME"));
-        System.setProperty("DB_PASSWORD", dotenv.get("DB_PASSWORD"));
+        // Set all environment properties for Spring Boot
+        dotenv.entries().forEach(entry -> {
+            System.setProperty(entry.getKey(), entry.getValue());
+        });
 
         SpringApplication.run(App.class, args);
     }
