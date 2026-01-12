@@ -21,10 +21,14 @@ public class MEOfficerDashboardDTO {
         private Long totalParticipants;
         private Long activeFacilitators;
         private Long activeCohorts;
+        private Long totalCohorts;
         private Double completionRate;
         private Double avgScore;
         private Long pendingApprovals;
         private Double employmentRate;
+        private Double courseCoverage;
+        private Long pendingAccessRequests;
+        private Double surveyResponseRate;
     }
     
     @Data
