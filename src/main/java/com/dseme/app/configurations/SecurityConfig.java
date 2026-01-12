@@ -132,7 +132,6 @@ public class SecurityConfig {
                                 "/api/auth/verify",
                                 "/api/auth/resend-verification",
                                 "/api/auth/google",
-                                "/api/me-officer/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
@@ -141,7 +140,8 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/oauth2/**"
                         ).permitAll()
-                        .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR") // Only FACILITATOR role can access
+                        .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR")
+                        .requestMatchers("/api/me-officer/**").hasRole("ME_OFFICER")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -167,6 +167,45 @@ public class SecurityConfig {
         
         // JWT authentication filter runs first to extract and validate JWT
         http.addFilterBefore(authenticationJwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                // Facilitator authorization filter runs after JWT auth to validate facilitator access
+                .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManagerBean(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:3000",
+            "https://dse-me-a86v.onrender.com"
+        ));
+        
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+        
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With"
+        ));
+        
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}ePasswordAuthenticationFilter.class)
                 // Facilitator authorization filter runs after JWT auth to validate facilitator access
                 .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class);
 
