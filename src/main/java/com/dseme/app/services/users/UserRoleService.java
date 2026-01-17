@@ -51,11 +51,12 @@ public class UserRoleService {
         // Check if they don't have an already assigned role
         userPermissionService.allowedToRequestRole(requester);
 
-        Partner targetPartner = partnerRepo.findById(roleRequestDTO.getPartnerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Partner does not exist"));
+        // Simplified role request - no partner/center assignment for now
+        // Partner targetPartner = partnerRepo.findById(roleRequestDTO.getPartnerId())
+        //         .orElseThrow(() -> new ResourceNotFoundException("Partner does not exist"));
 
-        Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(roleRequestDTO.getCenterId(), targetPartner.getPartnerId())
-                .orElseThrow(() -> new ResourceNotFoundException("This center location is does not belong to " + targetPartner.getPartnerName()));
+        // Center targetCenter = centerRepo.findByIdAndPartner_PartnerId(roleRequestDTO.getCenterId(), targetPartner.getPartnerId())
+        //         .orElseThrow(() -> new ResourceNotFoundException("This center location is does not belong to " + targetPartner.getPartnerName()));
 
         Role requestedRole;
         try {
@@ -64,46 +65,23 @@ public class UserRoleService {
                 throw new ResourceNotFoundException("Invalid role: " + roleRequestDTO.getRequestedRole());
             }
 
-        boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterIdAndStatus(
-                requester.getId(),
-                requestedRole,
-                targetPartner.getPartnerId(),
-                targetCenter.getId(),
-                RequestStatus.PENDING
-        );
+        // Simplified duplicate check
+        // boolean checkDuplicates = roleRequestRepo.existsByRequesterIdAndRequestedRoleAndPartnerPartnerIdAndCenterIdAndStatus(
+        //         requester.getId(),
+        //         requestedRole,
+        //         targetPartner.getPartnerId(),
+        //         targetCenter.getId(),
+        //         RequestStatus.PENDING
+        // );
 
-        if (checkDuplicates) {
-            throw new ResourceAlreadyExistsException("This request already exists!");
-        }
+        // if (checkDuplicates) {
+        //     throw new ResourceAlreadyExistsException("This request already exists!");
+        // }
 
-        RoleRequest roleRequested = saveRoleRequest(requester, targetPartner, targetCenter, requestedRole);
+        // RoleRequest roleRequested = saveRoleRequest(requester, targetPartner, targetCenter, requestedRole);
 
-        List<User> potentialApprovers;
-
-        if( requestedRole == Role.FACILITATOR){
-            potentialApprovers = requestApprovers(Role.ME_OFFICER, targetPartner, targetCenter, requestedRole);
-
-        } else {
-            potentialApprovers = requestApprovers(Role.PARTNER, targetPartner, targetCenter, requestedRole);
-        }
-
-        if(potentialApprovers.isEmpty()){
-            throw new ResourceNotFoundException("Couldn't find anyone suitable to approve your request.");
-        }
-
-        String title = "Approval Request";
-        String message = "User with email : '" + requester.getEmail() +
-                "' wants approval for the role: " + requestedRole +
-                " within partner organization: " + targetPartner.getPartnerName() +
-                " at center: " + targetCenter.getCenterName() +
-                " at location: " + targetCenter.getLocation();
-
-        // Send notification to all suitable Partners in that Organisation
-        for (User suitableApprover : potentialApprovers) {
-            notificationService.sendApprovalNotification(suitableApprover, roleRequested, title, message);
-        }
-
-        return "Your Request was successfully sent!";
+        // Simplified - just return success message for now
+        return "Role request functionality temporarily disabled. Please use the new AccessRequest system.";
     }
 
     // Approving a Role Request and Updating all related tables

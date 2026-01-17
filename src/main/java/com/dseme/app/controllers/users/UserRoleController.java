@@ -19,10 +19,11 @@ public class UserRoleController {
         this.userRoleService = userRoleService;
     }
 
-    @PostMapping("/request/role")
-    public String requestApproval(HttpServletRequest actor, @Valid @RequestBody RoleRequestDTO roleRequestDTO) {
-        return userRoleService.requestRoleApproval(actor, roleRequestDTO);
-    }
+    // Temporarily disabled - using new AccessRequestController instead
+    // @PostMapping("/request/role")
+    // public String requestApproval(HttpServletRequest actor, @Valid @RequestBody RoleRequestDTO roleRequestDTO) {
+    //     return userRoleService.requestRoleApproval(actor, roleRequestDTO);
+    // }
 
     @PostMapping("/request/approve/{requestId}")
     public String approveRequest( HttpServletRequest actor, @PathVariable UUID requestId) {
