@@ -2,6 +2,7 @@ package com.dseme.app.services.me;
 
 import com.dseme.app.dtos.me.*;
 import com.dseme.app.enums.Role;
+import com.dseme.app.enums.Role;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.models.*;
@@ -89,6 +90,13 @@ public class MeFacilitatorService {
     public void deleteFacilitator(UUID id) {
         Facilitator facilitator = facilitatorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
+        
+        // Deactivate user and reset role to UNASSIGNED
+        User user = facilitator.getUser();
+        user.setRole(Role.UNASSIGNED);
+        user.setIsActive(false);
+        userRepository.save(user);
+        
         facilitatorRepository.delete(facilitator);
     }
 

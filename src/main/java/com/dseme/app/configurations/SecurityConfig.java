@@ -153,9 +153,11 @@ public class SecurityConfig {
                         ).permitAll()
                         // UNASSIGNED users can only request roles and view profile
                         .requestMatchers("/api/users/request/role").hasRole("UNASSIGNED")
+                        .requestMatchers("/api/users/profile").authenticated()
                         // ADMIN has full access
                         .requestMatchers("/api/access-requests/**").hasRole("ADMIN")
                         .requestMatchers("/api/facilitators/**").hasRole("ADMIN")
+                        // ME Portal endpoints - CRITICAL: Match actual controller paths
                         .requestMatchers("/api/courses/**").hasAnyRole("ADMIN", "ME_OFFICER")
                         .requestMatchers("/api/cohorts/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
                         .requestMatchers("/api/participants/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
