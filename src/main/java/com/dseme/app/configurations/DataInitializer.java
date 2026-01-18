@@ -6,12 +6,14 @@ import com.dseme.app.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Order(2) // Run after RoleEnumMigration
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
