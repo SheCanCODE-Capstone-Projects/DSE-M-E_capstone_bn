@@ -7,8 +7,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -18,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Environment environment;
 
     @Override
     public void run(String... args) {
@@ -25,10 +28,10 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createAdminUser() {
-        String adminEmail = System.getenv("ADMIN_EMAIL");
-        String adminPassword = System.getenv("ADMIN_PASSWORD");
+        String adminEmail = environment.getProperty("ADMIN_EMAIL");
+        String adminPassword = environment.getProperty("ADMIN_PASSWORD");
         
-        if (adminEmail == null || adminPassword == null) {
+        if (!StringUtils.hasText(adminEmail) || !StringUtils.hasText(adminPassword)) {
             throw new IllegalStateException("ADMIN_EMAIL and ADMIN_PASSWORD must be set");
         }
         
