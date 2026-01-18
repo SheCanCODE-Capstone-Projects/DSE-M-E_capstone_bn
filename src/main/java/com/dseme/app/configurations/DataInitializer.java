@@ -25,8 +25,12 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createAdminUser() {
-        String adminEmail = System.getProperty("ADMIN_EMAIL", "admin@dseme.com");
-        String adminPassword = System.getProperty("ADMIN_PASSWORD", "Admin@123");
+        String adminEmail = System.getenv("ADMIN_EMAIL");
+        String adminPassword = System.getenv("ADMIN_PASSWORD");
+        
+        if (adminEmail == null || adminPassword == null) {
+            throw new IllegalStateException("ADMIN_EMAIL and ADMIN_PASSWORD must be set");
+        }
         
         if (userRepository.findByEmail(adminEmail).isPresent()) {
             log.info("Admin user already exists. Skipping creation.");
@@ -44,7 +48,6 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         userRepository.save(admin);
-        log.info("✅ Admin user created successfully with email: {}", adminEmail);
-        log.info("⚠️ Please change the default password after first login.");
+        log.info("Admin user created successfully.");
     }
 }
