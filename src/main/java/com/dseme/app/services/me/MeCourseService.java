@@ -3,6 +3,7 @@ package com.dseme.app.services.me;
 import com.dseme.app.dtos.me.*;
 import com.dseme.app.enums.CourseLevel;
 import com.dseme.app.enums.CourseStatus;
+import com.dseme.app.exceptions.BadRequestException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.models.*;
@@ -45,7 +46,7 @@ public class MeCourseService {
                 .name(dto.getName())
                 .code(dto.getCode())
                 .description(dto.getDescription())
-                .level(CourseLevel.valueOf(dto.getLevel().toUpperCase()))
+                .level(parseCourseLevel(dto.getLevel()))
                 .durationWeeks(dto.getDurationWeeks() != null ? dto.getDurationWeeks() : 12)
                 .maxParticipants(dto.getMaxParticipants() != null ? dto.getMaxParticipants() : 30)
                 .status(CourseStatus.ACTIVE)
@@ -62,7 +63,7 @@ public class MeCourseService {
 
         course.setName(dto.getName());
         course.setDescription(dto.getDescription());
-        course.setLevel(CourseLevel.valueOf(dto.getLevel().toUpperCase()));
+        course.setLevel(parseCourseLevel(dto.getLevel()));
         course.setDurationWeeks(dto.getDurationWeeks());
         course.setMaxParticipants(dto.getMaxParticipants());
 
@@ -141,5 +142,13 @@ public class MeCourseService {
                                 .build())
                         .build())
                 .build();
+    }
+
+    private CourseLevel parseCourseLevel(String level) {
+        try {
+            return CourseLevel.valueOf(level.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid course level: " + level + ". Valid levels are: BEGINNER, INTERMEDIATE, ADVANCED");
+        }
     }
 }

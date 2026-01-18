@@ -23,6 +23,8 @@ public class App {
         System.setProperty("PORT", dotenv.get("PORT", "8088"));
         System.setProperty("GOOGLE_CLIENT_ID", dotenv.get("GOOGLE_CLIENT_ID", ""));
         System.setProperty("GOOGLE_CLIENT_SECRET", dotenv.get("GOOGLE_CLIENT_SECRET", ""));
+        System.setProperty("ADMIN_EMAIL", dotenv.get("ADMIN_EMAIL", "admin@dseme.com"));
+        System.setProperty("ADMIN_PASSWORD", dotenv.get("ADMIN_PASSWORD", "Admin@123"));
 
         SpringApplication.run(App.class, args);
     }

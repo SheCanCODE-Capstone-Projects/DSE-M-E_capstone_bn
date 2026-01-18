@@ -4,6 +4,7 @@ import com.dseme.app.dtos.users.AccessRequestResponseDTO;
 import com.dseme.app.dtos.users.RoleRequestDTO;
 import com.dseme.app.enums.RequestStatus;
 import com.dseme.app.enums.Role;
+import com.dseme.app.exceptions.BadRequestException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.AccessRequest;
 import com.dseme.app.models.User;
@@ -35,10 +36,17 @@ public class AccessRequestService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        Role requestedRole;
+        try {
+            requestedRole = Role.valueOf(dto.getRequestedRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid role: " + dto.getRequestedRole() + ". Valid roles are: FACILITATOR, ME_OFFICER, DONOR");
+        }
+
         AccessRequest request = AccessRequest.builder()
                 .requesterEmail(user.getEmail())
                 .requesterName(user.getFirstName() + " " + user.getLastName())
-                .requestedRole(Role.valueOf(dto.getRequestedRole().toUpperCase()))
+                .requestedRole(requestedRole)
                 .reason(dto.getReason())
                 .status(RequestStatus.PENDING)
                 .build();

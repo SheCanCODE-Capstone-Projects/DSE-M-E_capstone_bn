@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class MeFacilitatorController {
 
     @GetMapping
     @Operation(summary = "List all facilitators")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<FacilitatorResponseDTO>> getAllFacilitators(Pageable pageable) {
         Page<FacilitatorResponseDTO> facilitators = facilitatorService.getAllFacilitators(pageable);
         return ResponseEntity.ok(facilitators);
@@ -31,6 +33,7 @@ public class MeFacilitatorController {
 
     @PostMapping
     @Operation(summary = "Create new facilitator")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FacilitatorResponseDTO> createFacilitator(@Valid @RequestBody CreateFacilitatorDTO dto) {
         FacilitatorResponseDTO facilitator = facilitatorService.createFacilitator(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(facilitator);
@@ -38,6 +41,7 @@ public class MeFacilitatorController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update facilitator")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FacilitatorResponseDTO> updateFacilitator(
             @PathVariable UUID id, 
             @Valid @RequestBody CreateFacilitatorDTO dto) {
@@ -47,6 +51,7 @@ public class MeFacilitatorController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete facilitator")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteFacilitator(@PathVariable UUID id) {
         facilitatorService.deleteFacilitator(id);
         return ResponseEntity.noContent().build();
