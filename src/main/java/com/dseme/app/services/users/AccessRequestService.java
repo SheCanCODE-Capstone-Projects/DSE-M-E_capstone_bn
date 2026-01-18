@@ -42,6 +42,11 @@ public class AccessRequestService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid role: " + dto.getRequestedRole() + ". Valid roles are: FACILITATOR, ME_OFFICER, DONOR");
         }
+        
+        // Enforce allowlist - only these roles can be requested
+        if (requestedRole != Role.FACILITATOR && requestedRole != Role.ME_OFFICER && requestedRole != Role.DONOR) {
+            throw new BadRequestException("Invalid role request. Allowed roles: FACILITATOR, ME_OFFICER, DONOR");
+        }
 
         AccessRequest request = AccessRequest.builder()
                 .requesterEmail(user.getEmail())
