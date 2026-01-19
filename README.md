@@ -276,17 +276,34 @@ mvn spring-boot:run
 **Capabilities**:
 - ✅ View all participants under partner (current + past cohorts)
 - ✅ Verify participant profiles (irreversible, audit logged)
+- ✅ Update and archive participant profiles
+- ✅ Advanced participant search and filtering
+- ✅ Bulk participant operations (update, archive, reminders)
 - ✅ Review pending enrollments
 - ✅ Approve/reject enrollments (audit logged)
+- ✅ Bulk enrollment approval/rejection
 - ✅ View attendance summaries (current + past cohorts)
 - ✅ Validate scores uploaded by facilitators
-- ✅ Record internship placements
-- ✅ Record employment outcomes
-- ✅ Send surveys to partner participants
-- ✅ View survey analytics (aggregated, no PII)
+- ✅ Create and manage Programs (full CRUD)
+- ✅ Create and manage Cohorts (full CRUD)
+- ✅ Create and manage Training Modules (full CRUD)
+- ✅ Assign modules to facilitators
+- ✅ Create and manage Facilitator accounts
+- ✅ Update facilitator profiles, activate/deactivate accounts
+- ✅ Reset facilitator passwords
+- ✅ View all centers with metrics
+- ✅ Record internship placements (with duplicate prevention)
+- ✅ Record employment outcomes (with duplicate prevention)
+- ✅ Update internship/employment outcomes (can edit FACILITATOR-created records)
+- ✅ Create and manage program-wide surveys
+- ✅ View survey analytics with cohort breakdown
+- ✅ Send bulk survey reminders
+- ✅ View and manage notifications
+- ✅ View audit logs with filtering and export
 - ✅ Export reports (CSV/PDF)
 - ✅ View data consistency alerts
 - ✅ Access automated monthly reports
+- ✅ Dashboard with partner-level metrics
 
 **Restrictions**:
 - ❌ Cannot access other partners' data
@@ -451,53 +468,140 @@ mvn spring-boot:run
 
 ### ME_OFFICER Endpoints (Requires `ROLE_ME_OFFICER`)
 
+All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can only access data belonging to their assigned partner.
+
 #### Participant Management
 
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
-| GET | `/api/me-officer/participants` | Get all participants (partner-scoped) | ✅ |
-| PATCH | `/api/me-officer/participants/{participantId}/verify` | Verify participant profile | ✅ |
+| GET | `/api/me-officer/participants` | Get all participants with pagination, search, and filtering | ✅ |
+| GET | `/api/me-officer/participants/search` | Advanced search with multiple criteria | ✅ |
+| GET | `/api/me-officer/participants/{participantId}/profile` | Get detailed participant profile with performance history | ✅ |
+| PUT | `/api/me-officer/participants/{participantId}` | Update participant profile | ✅ |
+| PATCH | `/api/me-officer/participants/{participantId}/verify` | Verify participant profile (irreversible) | ✅ |
+| PATCH | `/api/me-officer/participants/{participantId}/archive` | Archive participant (soft delete) | ✅ |
+| POST | `/api/me-officer/participants/bulk-action` | Perform bulk actions (SEND_REMINDER, CHANGE_COHORT, EXPORT_DATA, ARCHIVE) | ✅ |
+| PUT | `/api/me-officer/participants/bulk-update` | Bulk update multiple participants | ✅ |
 
-#### Enrollment Management
-
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| GET | `/api/me-officer/enrollments/pending` | Get pending enrollments | ✅ |
-| PATCH | `/api/me-officer/enrollments/{enrollmentId}/approve` | Approve enrollment | ✅ |
-| PATCH | `/api/me-officer/enrollments/{enrollmentId}/reject` | Reject enrollment | ✅ |
-
-#### Attendance & Performance Oversight
+#### Facilitator Management
 
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
-| GET | `/api/me-officer/attendance/summary` | Get attendance summary | ✅ |
-| PATCH | `/api/me-officer/scores/{scoreId}/validate` | Validate score | ✅ |
+| GET | `/api/me-officer/facilitators` | Get all facilitators with pagination and filtering | ✅ |
+| GET | `/api/me-officer/facilitators/search` | Advanced facilitator search | ✅ |
+| GET | `/api/me-officer/facilitators/{facilitatorId}` | Get detailed facilitator profile with activity logs | ✅ |
+| POST | `/api/me-officer/facilitators/assign` | Assign/unassign facilitators to cohorts and modules | ✅ |
+| POST | `/api/me-officer/facilitators/bulk-action` | Bulk facilitator actions | ✅ |
 
-#### Internship & Employment Outcomes
+#### Facilitator Account Management
 
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
-| POST | `/api/me-officer/internships` | Record internship placement | ✅ |
-| POST | `/api/me-officer/employment-outcomes` | Record employment outcome | ✅ |
+| POST | `/api/me-officer/facilitators/management/create` | Create new facilitator account with welcome email | ✅ |
+| PUT | `/api/me-officer/facilitators/management/{facilitatorId}` | Update facilitator profile (excluding email/role) | ✅ |
+| PATCH | `/api/me-officer/facilitators/management/{facilitatorId}/status` | Activate/deactivate facilitator account | ✅ |
+| POST | `/api/me-officer/facilitators/management/{facilitatorId}/reset-password` | Reset facilitator password | ✅ |
+
+#### Program Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/programs` | Create new program | ✅ |
+| GET | `/api/me-officer/programs` | Get all programs with pagination and metrics | ✅ |
+| GET | `/api/me-officer/programs/{programId}` | Get detailed program information with cohorts and modules | ✅ |
+| PUT | `/api/me-officer/programs/{programId}` | Update program | ✅ |
+| DELETE | `/api/me-officer/programs/{programId}` | Delete program (if no active cohorts) | ✅ |
+
+#### Cohort Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/cohorts` | Create new cohort | ✅ |
+| GET | `/api/me-officer/cohorts` | Get all cohorts with pagination and metrics | ✅ |
+| GET | `/api/me-officer/cohorts/{cohortId}` | Get detailed cohort information with participant lists | ✅ |
+| PUT | `/api/me-officer/cohorts/{cohortId}` | Update cohort | ✅ |
+| DELETE | `/api/me-officer/cohorts/{cohortId}` | Delete cohort (if no enrollments) | ✅ |
+
+#### Training Module Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/training-modules` | Create training module | ✅ |
+| GET | `/api/me-officer/training-modules` | Get all modules for partner's programs | ✅ |
+| GET | `/api/me-officer/training-modules/{moduleId}` | Get module details | ✅ |
+| PUT | `/api/me-officer/training-modules/{moduleId}` | Update module | ✅ |
+| DELETE | `/api/me-officer/training-modules/{moduleId}` | Delete module | ✅ |
+| POST | `/api/me-officer/training-modules/{moduleId}/assign` | Assign module to facilitator | ✅ |
 
 #### Survey Management
 
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
+| POST | `/api/me-officer/surveys` | Create program-wide survey | ✅ |
+| GET | `/api/me-officer/surveys` | Get survey overview with analytics | ✅ |
+| GET | `/api/me-officer/surveys/{surveyId}` | Get detailed survey with question analytics and cohort breakdown | ✅ |
+| POST | `/api/me-officer/surveys/{surveyId}/bulk-reminder` | Send bulk reminders for survey | ✅ |
 | POST | `/api/me-officer/surveys/send` | Send survey to partner participants | ✅ |
-| GET | `/api/me-officer/surveys/summary` | Get survey analytics (aggregated) | ✅ |
 
-#### Reporting & Exports
-
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| GET | `/api/me-officer/reports/export` | Export report (CSV/PDF) | ✅ |
-
-#### Data Consistency Alerts
+#### Center Management
 
 | Method | Endpoint | Description | Status |
 |--------|----------|-------------|--------|
-| GET | `/api/me-officer/alerts/consistency-check` | Get data consistency alerts | ✅ |
+| GET | `/api/me-officer/centers` | Get all centers with pagination and metrics | ✅ |
+| GET | `/api/me-officer/centers/{centerId}` | Get detailed center information with cohorts and facilitators | ✅ |
+
+#### Internship Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/internships` | Create internship record (for active/completed cohorts) | ✅ |
+| PUT | `/api/me-officer/internships/{internshipId}` | Update internship record (can edit FACILITATOR-created records) | ✅ |
+
+#### Employment Outcome Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/employment-outcomes` | Create employment outcome record (for active/completed cohorts) | ✅ |
+| PUT | `/api/me-officer/employment-outcomes/{employmentOutcomeId}` | Update employment outcome (can edit FACILITATOR-created records) | ✅ |
+
+#### Enrollment Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/me-officer/enrollments/bulk-approval` | Bulk approve/reject enrollments | ✅ |
+
+#### Notification Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/me-officer/notifications` | Get all notifications with filtering (type, priority, read status) | ✅ |
+| PATCH | `/api/me-officer/notifications/{notificationId}/read` | Mark notification as read | ✅ |
+| PATCH | `/api/me-officer/notifications/mark-read` | Mark multiple notifications as read | ✅ |
+| GET | `/api/me-officer/notifications/preferences` | Get notification preferences | ✅ |
+| PUT | `/api/me-officer/notifications/preferences` | Update notification preferences | ✅ |
+
+#### Audit Log Viewing
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/me-officer/audit-logs` | Get audit logs with filtering (actor, action, entity type, date range) | ✅ |
+| GET | `/api/me-officer/audit-logs/export` | Export audit logs to CSV | ✅ |
+
+#### Reports & Alerts
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/me-officer/reports` | Get all report documents | ✅ |
+| GET | `/api/me-officer/reports/{reportId}` | Get report document details | ✅ |
+| GET | `/api/me-officer/reports/{reportId}/download` | Download report document (CSV/PDF) | ✅ |
+| GET | `/api/me-officer/alerts` | Get all system alerts | ✅ |
+| PATCH | `/api/me-officer/alerts/{alertId}/acknowledge` | Acknowledge alert | ✅ |
+
+#### Dashboard
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/me-officer/dashboard` | Get dashboard overview with key metrics | ✅ |
 
 ### Other Endpoints
 
@@ -777,6 +881,10 @@ The application uses Flyway for database migrations. All migration files are loc
 - `V29__add_verification_to_participants.sql` - Participant verification
 - `V30__add_validation_to_scores.sql` - Score validation
 - `V31__create_report_snapshots_table.sql` - Report snapshots table
+- `V32__create_module_assignments_table.sql` - Module assignments table
+- `V33__add_module_id_to_enrollments.sql` - Module ID in enrollments
+- `V34__create_alerts_table.sql` - System alerts table
+- `V35__add_created_by_to_employment_outcomes.sql` - Created by field in employment outcomes
 
 ---
 
