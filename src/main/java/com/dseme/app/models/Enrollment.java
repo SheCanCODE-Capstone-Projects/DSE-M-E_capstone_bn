@@ -30,6 +30,15 @@ public class Enrollment {
     @JoinColumn(name = "cohort_id", nullable = false)
     private Cohort cohort;
 
+    /**
+     * Training module this enrollment is associated with.
+     * Set when facilitator enrolls participant to their assigned module.
+     * Can be null for legacy enrollments or enrollments not tied to a specific module.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "module_id")
+    private TrainingModule module;
+
     @Column(name = "enrollment_date", nullable = false)
     private LocalDate enrollmentDate;
 

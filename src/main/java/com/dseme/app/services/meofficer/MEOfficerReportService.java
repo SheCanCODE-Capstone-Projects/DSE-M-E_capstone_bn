@@ -19,6 +19,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -42,8 +43,22 @@ public class MEOfficerReportService {
     private final SurveyResponseRepository surveyResponseRepository;
     private final SurveyQuestionRepository surveyQuestionRepository;
     private final MEOfficerAuthorizationService meOfficerAuthorizationService;
+    private final ReportSnapshotRepository reportSnapshotRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    
+    /**
+     * Formats file size in bytes to human-readable string.
+     */
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        } else {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        }
+    }
 
     /**
      * Exports report in CSV or PDF format.
@@ -445,5 +460,181 @@ public class MEOfficerReportService {
             log.error("Error converting CSV to PDF: {}", e.getMessage(), e);
             throw new IOException("Failed to generate PDF: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Gets all available reports for the partner.
+     * Returns metadata for generated documents.
+     * 
+     * @param context ME_OFFICER context
+     * @return List of report documents
+     */
+    public List<com.dseme.app.dtos.meofficer.ReportDocumentDTO> getAvailableReports(MEOfficerContext context) {
+        // Validate partner access
+        meOfficerAuthorizationService.validatePartnerAccess(context, context.getPartnerId());
+
+        // Get all report snapshots for partner
+        List<ReportSnapshot> snapshots = reportSnapshotRepository.findByPartnerPartnerId(context.getPartnerId());
+
+        return snapshots.stream()
+                .map(snapshot -> mapToReportDocumentDTO(snapshot, context))
+                .sorted((a, b) -> b.getGeneratedAt().compareTo(a.getGeneratedAt())) // Most recent first
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Gets report document by ID.
+     * 
+     * @param context ME_OFFICER context
+     * @param documentId Document ID (ReportSnapshot ID)
+     * @return Report document DTO
+     */
+    public com.dseme.app.dtos.meofficer.ReportDocumentDTO getReportDocument(
+            MEOfficerContext context,
+            UUID documentId
+    ) {
+        // Validate partner access
+        meOfficerAuthorizationService.validatePartnerAccess(context, context.getPartnerId());
+
+        ReportSnapshot snapshot = reportSnapshotRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Report document not found with ID: " + documentId
+                ));
+
+        // Validate snapshot belongs to partner
+        if (!snapshot.getPartner().getPartnerId().equals(context.getPartnerId())) {
+            throw new AccessDeniedException(
+                    "Access denied. Report document does not belong to your assigned partner."
+            );
+        }
+
+        return mapToReportDocumentDTO(snapshot, context);
+    }
+
+    /**
+     * Maps ReportSnapshot to ReportDocumentDTO.
+     */
+    private com.dseme.app.dtos.meofficer.ReportDocumentDTO mapToReportDocumentDTO(
+            ReportSnapshot snapshot,
+            MEOfficerContext context
+    ) {
+        // Determine report type from reportType string
+        com.dseme.app.enums.ReportType reportType = determineReportType(snapshot.getReportType());
+        
+        // Format period string
+        String period = formatPeriod(snapshot.getReportPeriodStart(), snapshot.getReportPeriodEnd());
+        
+        // Format file size
+        String fileSize = snapshot.getFileSizeBytes() != null ?
+                formatFileSize(snapshot.getFileSizeBytes()) : "Unknown";
+        
+        // Generate download URL
+        String downloadUrl = "/api/me-officer/reports/download/" + snapshot.getId();
+
+        return com.dseme.app.dtos.meofficer.ReportDocumentDTO.builder()
+                .documentId(snapshot.getId())
+                .reportName(generateReportName(snapshot.getReportType(), snapshot.getReportPeriodStart()))
+                .reportType(reportType)
+                .period(period)
+                .periodStart(snapshot.getReportPeriodStart())
+                .periodEnd(snapshot.getReportPeriodEnd())
+                .fileSize(fileSize)
+                .fileSizeBytes(snapshot.getFileSizeBytes())
+                .fileFormat(snapshot.getFileFormat())
+                .downloadUrl(downloadUrl)
+                .generatedByName(snapshot.getGeneratedBy() != null ?
+                        snapshot.getGeneratedBy().getFirstName() + " " + 
+                        snapshot.getGeneratedBy().getLastName() : "System")
+                .generatedAt(snapshot.getGeneratedAt())
+                .build();
+    }
+
+    /**
+     * Determines ReportType enum from report type string.
+     */
+    private com.dseme.app.enums.ReportType determineReportType(String reportTypeString) {
+        if (reportTypeString == null) {
+            return com.dseme.app.enums.ReportType.CUSTOM;
+        }
+        
+        String upper = reportTypeString.toUpperCase();
+        if (upper.contains("MONTHLY")) {
+            return com.dseme.app.enums.ReportType.MONTHLY;
+        } else if (upper.contains("QUARTERLY")) {
+            return com.dseme.app.enums.ReportType.QUARTERLY;
+        } else if (upper.contains("ANNUAL")) {
+            return com.dseme.app.enums.ReportType.ANNUAL;
+        } else {
+            return com.dseme.app.enums.ReportType.CUSTOM;
+        }
+    }
+
+    /**
+     * Formats period string from start and end dates.
+     */
+    private String formatPeriod(LocalDate start, LocalDate end) {
+        if (start == null) {
+            return "Unknown";
+        }
+        
+        if (end == null || start.equals(end)) {
+            return start.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy"));
+        }
+        
+        // Check if same month
+        if (start.getYear() == end.getYear() && start.getMonth() == end.getMonth()) {
+            return start.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy"));
+        }
+        
+        // Check if same year
+        if (start.getYear() == end.getYear()) {
+            return start.format(java.time.format.DateTimeFormatter.ofPattern("MMM")) + " - " +
+                   end.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy"));
+        }
+        
+        return start.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy")) + " - " +
+               end.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy"));
+    }
+
+    /**
+     * Generates report name from report type and period.
+     */
+    private String generateReportName(String reportType, LocalDate periodStart) {
+        String typeName = reportType != null ? reportType.replace("_", " ") : "Report";
+        String periodStr = periodStart != null ?
+                periodStart.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy")) : "";
+        
+        return typeName + (periodStr.isEmpty() ? "" : " - " + periodStr);
+    }
+
+    /**
+     * Gets report document data for download.
+     * 
+     * @param context ME_OFFICER context
+     * @param documentId Document ID (ReportSnapshot ID)
+     * @return Report data as byte array
+     */
+    public byte[] getReportDocumentData(MEOfficerContext context, UUID documentId) {
+        // Validate partner access
+        meOfficerAuthorizationService.validatePartnerAccess(context, context.getPartnerId());
+
+        ReportSnapshot snapshot = reportSnapshotRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Report document not found with ID: " + documentId
+                ));
+
+        // Validate snapshot belongs to partner
+        if (!snapshot.getPartner().getPartnerId().equals(context.getPartnerId())) {
+            throw new AccessDeniedException(
+                    "Access denied. Report document does not belong to your assigned partner."
+            );
+        }
+
+        // Return report data as bytes
+        // Note: In a real implementation, you might store files in blob storage
+        // For now, we return the stored reportData as bytes
+        return snapshot.getReportData() != null ? 
+                snapshot.getReportData().getBytes() : 
+                new byte[0];
     }
 }

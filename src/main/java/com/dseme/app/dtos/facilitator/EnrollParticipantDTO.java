@@ -9,10 +9,11 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * DTO for enrolling a participant into a cohort.
+ * DTO for enrolling a participant into a module.
  * 
- * Note: The cohort is automatically set to the facilitator's active cohort.
- * This DTO only requires the participant ID.
+ * When facilitator enrolls a participant, they're enrolling them into a specific module
+ * that has been assigned to them by ME_OFFICER.
+ * The cohort is automatically set to the facilitator's active cohort.
  */
 @Data
 @Builder
@@ -22,5 +23,12 @@ public class EnrollParticipantDTO {
 
     @NotNull(message = "Participant ID is required")
     private UUID participantId;
+    
+    /**
+     * Module ID to enroll the participant into.
+     * Module must be assigned to the facilitator by ME_OFFICER.
+     */
+    @NotNull(message = "Module ID is required")
+    private UUID moduleId;
 }
 

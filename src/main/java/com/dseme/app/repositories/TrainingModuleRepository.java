@@ -2,6 +2,8 @@ package com.dseme.app.repositories;
 
 import com.dseme.app.models.TrainingModule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +15,7 @@ public interface TrainingModuleRepository extends JpaRepository<TrainingModule, 
      * Find training modules by program ID.
      * Used to get modules for a specific program.
      */
-    List<TrainingModule> findByProgramId(UUID programId);
+    @Query("SELECT tm FROM TrainingModule tm WHERE tm.program.id = :programId")
+    List<TrainingModule> findByProgramId(@Param("programId") UUID programId);
 }
 

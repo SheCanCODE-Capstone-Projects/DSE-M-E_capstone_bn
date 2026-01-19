@@ -81,7 +81,7 @@ public class EnrollmentController extends FacilitatorBaseController {
         FacilitatorContext context = getFacilitatorContext(request);
         
         BulkEnrollmentResponseDTO response = enrollmentService.bulkEnrollParticipants(
-                context, dto.getParticipantIds());
+                context, dto.getParticipantIds(), dto.getModuleId());
         
         return ResponseEntity.ok(response);
     }

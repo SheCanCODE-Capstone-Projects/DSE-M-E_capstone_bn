@@ -11,8 +11,11 @@ import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.Cohort;
 import com.dseme.app.models.Enrollment;
 import com.dseme.app.models.Participant;
+import com.dseme.app.models.TrainingModule;
 import com.dseme.app.repositories.EnrollmentRepository;
+import com.dseme.app.repositories.ModuleAssignmentRepository;
 import com.dseme.app.repositories.ParticipantRepository;
+import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,8 @@ public class EnrollmentService {
     private final ParticipantRepository participantRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final CohortIsolationService cohortIsolationService;
+    private final ModuleAssignmentRepository moduleAssignmentRepository;
+    private final TrainingModuleRepository trainingModuleRepository;
 
     /**
      * Enrolls a participant into the facilitator's active cohort.
@@ -97,13 +102,39 @@ public class EnrollmentService {
             );
         }
 
-        // Check if participant is already enrolled in this cohort
-        if (enrollmentRepository.existsByParticipantIdAndCohortId(
-                dto.getParticipantId(), 
-                context.getCohortId()
-        )) {
+        // Load module
+        TrainingModule module = trainingModuleRepository.findById(dto.getModuleId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Training module not found with ID: " + dto.getModuleId()
+                ));
+
+        // Validate module belongs to active cohort's program
+        if (!module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
+            throw new AccessDeniedException(
+                "Access denied. Module does not belong to your active cohort's program."
+            );
+        }
+
+        // Validate module is assigned to this facilitator for the active cohort
+        boolean isAssigned = moduleAssignmentRepository.existsByFacilitatorIdAndModuleIdAndCohortId(
+                context.getFacilitator().getId(), dto.getModuleId(), activeCohort.getId());
+        
+        if (!isAssigned) {
+            throw new AccessDeniedException(
+                "Access denied. Module is not assigned to you for this cohort. " +
+                "Only ME_OFFICER can assign modules to facilitators."
+            );
+        }
+
+        // Check if participant is already enrolled in this cohort with this module
+        List<Enrollment> existingEnrollments = enrollmentRepository.findByParticipantId(dto.getParticipantId());
+        boolean alreadyEnrolled = existingEnrollments.stream()
+                .anyMatch(e -> e.getCohort().getId().equals(context.getCohortId()) &&
+                              e.getModule() != null && e.getModule().getId().equals(dto.getModuleId()));
+        
+        if (alreadyEnrolled) {
             throw new ResourceAlreadyExistsException(
-                "Participant is already enrolled in this cohort."
+                "Participant is already enrolled in this module for this cohort."
             );
         }
 
@@ -114,10 +145,11 @@ public class EnrollmentService {
             );
         }
 
-        // Create enrollment
+        // Create enrollment with module assignment
         Enrollment enrollment = Enrollment.builder()
                 .participant(participant)
                 .cohort(activeCohort) // Must be facilitator's active cohort
+                .module(module) // Module assigned to facilitator
                 .enrollmentDate(LocalDate.now())
                 .status(EnrollmentStatus.ENROLLED) // Status is ENROLLED
                 .isVerified(false) // Facilitator cannot set verification flags (self-approval forbidden)
@@ -171,15 +203,17 @@ public class EnrollmentService {
     }
 
     /**
-     * Bulk enrolls multiple participants into the facilitator's active cohort.
+     * Bulk enrolls multiple participants into the facilitator's active cohort for a specific module.
      * 
      * @param context Facilitator context
      * @param participantIds List of participant IDs to enroll
+     * @param moduleId Module ID to enroll participants into
      * @return Bulk enrollment response with success/failure counts
      */
     public BulkEnrollmentResponseDTO bulkEnrollParticipants(
             FacilitatorContext context, 
-            List<UUID> participantIds
+            List<UUID> participantIds,
+            UUID moduleId
     ) {
         long successful = 0L;
         long failed = 0L;
@@ -189,6 +223,7 @@ public class EnrollmentService {
             try {
                 EnrollParticipantDTO dto = EnrollParticipantDTO.builder()
                         .participantId(participantId)
+                        .moduleId(moduleId)
                         .build();
                 enrollParticipant(context, dto);
                 successful++;

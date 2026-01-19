@@ -67,6 +67,10 @@ public class EmploymentOutcome {
     @Column(name = "verified_at")
     private Instant verifiedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

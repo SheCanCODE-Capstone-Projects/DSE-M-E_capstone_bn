@@ -1,10 +1,9 @@
 package com.dseme.app.controllers.meofficer;
 
-import com.dseme.app.dtos.meofficer.CreateInternshipRequestDTO;
-import com.dseme.app.dtos.meofficer.InternshipResponseDTO;
-import com.dseme.app.dtos.meofficer.MEOfficerContext;
+import com.dseme.app.dtos.meofficer.*;
 import com.dseme.app.services.meofficer.MEOfficerInternshipService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * Controller for ME_OFFICER internship operations.
@@ -58,5 +59,37 @@ public class MEOfficerInternshipController extends MEOfficerBaseController {
         InternshipResponseDTO response = internshipService.createInternship(context, createRequest);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Updates an existing internship.
+     * ME_OFFICER can update internships created by FACILITATOR or by themselves.
+     * 
+     * PUT /api/me-officer/internships/{internshipId}
+     */
+    @Operation(
+            summary = "Update internship",
+            description = "Updates an existing internship placement. " +
+                    "ME_OFFICER can update internships created by FACILITATOR or by themselves. " +
+                    "Only internships belonging to ME_OFFICER's partner can be updated."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Internship updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid input"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Internship does not belong to your partner"),
+            @ApiResponse(responseCode = "404", description = "Not Found - Internship not found")
+    })
+    @PutMapping("/{internshipId}")
+    public ResponseEntity<InternshipResponseDTO> updateInternship(
+            HttpServletRequest request,
+            @Parameter(description = "Internship ID") @PathVariable UUID internshipId,
+            @Valid @RequestBody UpdateInternshipRequestDTO updateRequest
+    ) {
+        MEOfficerContext context = getMEOfficerContext(request);
+        
+        InternshipResponseDTO response = internshipService.updateInternship(context, internshipId, updateRequest);
+        
+        return ResponseEntity.ok(response);
     }
 }

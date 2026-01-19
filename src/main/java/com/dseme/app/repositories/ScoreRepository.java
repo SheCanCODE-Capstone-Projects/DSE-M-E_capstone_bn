@@ -40,5 +40,12 @@ public interface ScoreRepository extends JpaRepository<Score, UUID> {
             @Param("scoreId") UUID scoreId,
             @Param("partnerId") String partnerId
     );
+    
+    /**
+     * Find scores by partner ID (through enrollment -> participant).
+     * Used for partner-level score queries.
+     */
+    @Query("SELECT s FROM Score s WHERE s.enrollment.participant.partner.partnerId = :partnerId")
+    List<Score> findByEnrollmentParticipantPartnerPartnerId(@Param("partnerId") String partnerId);
 }
 

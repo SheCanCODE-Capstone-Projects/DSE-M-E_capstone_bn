@@ -1,10 +1,9 @@
 package com.dseme.app.controllers.meofficer;
 
-import com.dseme.app.dtos.meofficer.CreateEmploymentOutcomeRequestDTO;
-import com.dseme.app.dtos.meofficer.EmploymentOutcomeResponseDTO;
-import com.dseme.app.dtos.meofficer.MEOfficerContext;
+import com.dseme.app.dtos.meofficer.*;
 import com.dseme.app.services.meofficer.MEOfficerEmploymentOutcomeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * Controller for ME_OFFICER employment outcome operations.
@@ -59,5 +60,38 @@ public class MEOfficerEmploymentOutcomeController extends MEOfficerBaseControlle
         EmploymentOutcomeResponseDTO response = employmentOutcomeService.createEmploymentOutcome(context, createRequest);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Updates an existing employment outcome.
+     * ME_OFFICER can update outcomes created by FACILITATOR or by themselves.
+     * 
+     * PUT /api/me-officer/employment-outcomes/{employmentOutcomeId}
+     */
+    @Operation(
+            summary = "Update employment outcome",
+            description = "Updates an existing employment outcome. " +
+                    "ME_OFFICER can update outcomes created by FACILITATOR or by themselves. " +
+                    "Only outcomes belonging to ME_OFFICER's partner can be updated."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employment outcome updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid input"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Employment outcome does not belong to your partner"),
+            @ApiResponse(responseCode = "404", description = "Not Found - Employment outcome or internship not found")
+    })
+    @PutMapping("/{employmentOutcomeId}")
+    public ResponseEntity<EmploymentOutcomeResponseDTO> updateEmploymentOutcome(
+            HttpServletRequest request,
+            @Parameter(description = "Employment outcome ID") @PathVariable UUID employmentOutcomeId,
+            @Valid @RequestBody UpdateEmploymentOutcomeRequestDTO updateRequest
+    ) {
+        MEOfficerContext context = getMEOfficerContext(request);
+        
+        EmploymentOutcomeResponseDTO response = employmentOutcomeService.updateEmploymentOutcome(
+                context, employmentOutcomeId, updateRequest);
+        
+        return ResponseEntity.ok(response);
     }
 }
