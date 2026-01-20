@@ -67,8 +67,10 @@ public class AuthService {
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setPasswordHash(encoder.encode(dto.getPassword()));
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
         user.setRole(Role.UNASSIGNED);
-        user.setIsActive(false);
+        user.setIsActive(true);  // Allow login with UNASSIGNED role
         user.setIsVerified(false);
         user.setProvider(Provider.LOCAL);
 

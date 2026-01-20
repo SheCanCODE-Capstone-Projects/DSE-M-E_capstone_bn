@@ -5,8 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -15,40 +15,37 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Custom authentication entry point that returns JSON error responses
- * instead of redirecting to login page or returning HTML error pages.
- * 
- * This is critical for REST API behavior - when an unauthenticated request
- * hits a protected endpoint, this returns a proper JSON 401 response.
+ * Custom access denied handler that returns JSON error responses
+ * for 403 Forbidden scenarios (authenticated but insufficient permissions).
  */
 @Slf4j
 @Component
-public class AuthEntryPointJwt implements AuthenticationEntryPoint {
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Override
-    public void commence(
+    public void handle(
             HttpServletRequest request,
             HttpServletResponse response,
-            AuthenticationException authException
+            AccessDeniedException accessDeniedException
     ) throws IOException {
         
-        log.warn("Unauthorized access attempt to: {} from IP: {}", 
+        log.warn("Access denied for user to: {} from IP: {}", 
                 request.getRequestURI(), 
                 getClientIpAddress(request));
         
         // Set response headers
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setCharacterEncoding("UTF-8");
         
         // Create structured error response
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("status", HttpServletResponse.SC_UNAUTHORIZED);
-        errorResponse.put("error", "Unauthorized");
-        errorResponse.put("message", "Authentication required. Please provide a valid JWT token.");
+        errorResponse.put("status", HttpServletResponse.SC_FORBIDDEN);
+        errorResponse.put("error", "Forbidden");
+        errorResponse.put("message", "Access denied. You don't have permission to access this resource.");
         errorResponse.put("path", request.getRequestURI());
         
         // Write JSON response
