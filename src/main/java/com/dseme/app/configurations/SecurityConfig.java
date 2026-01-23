@@ -2,6 +2,8 @@ package com.dseme.app.configurations;
 import com.dseme.app.filters.FacilitatorAuthorizationFilter;
 import com.dseme.app.filters.JwtAuthenticationFilter;
 import com.dseme.app.filters.MEOfficerAuthorizationFilter;
+import com.dseme.app.services.auth.AuthEntryPointJwt;
+import com.dseme.app.services.auth.CustomAccessDeniedHandler;
 import com.dseme.app.services.auth.CustomOAuth2FailureHandler;
 import com.dseme.app.services.auth.CustomOAuth2SuccessHandler;
 import com.dseme.app.services.auth.CustomOAuth2UserService;
@@ -18,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -38,6 +41,7 @@ import java.util.Arrays;
 @Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -48,6 +52,8 @@ public class SecurityConfig {
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final AuthEntryPointJwt authEntryPointJwt;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -123,6 +129,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authenticationProvider(authenticationProvider)
                 .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable) // Disable form login for REST API
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authEntryPointJwt) // Use custom JSON entry point
+                        .accessDeniedHandler(customAccessDeniedHandler) // Use custom JSON access denied handler
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight requests
                         .requestMatchers(
@@ -142,20 +153,28 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/oauth2/**"
                         ).permitAll()
-                        .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR") // Only FACILITATOR role can access
-                        .requestMatchers("/api/me-officer/**").hasRole("ME_OFFICER") // Only ME_OFFICER role can access
+                        // UNASSIGNED users can only request roles and view profile
+                        .requestMatchers("/api/users/request/role").hasRole("UNASSIGNED")
+                        .requestMatchers("/api/users/profile").authenticated()
+                        // ADMIN has full access
+                        .requestMatchers("/api/access-requests/**").hasRole("ADMIN")
+                        .requestMatchers("/api/facilitators/**").hasRole("ADMIN")
+                        // ME Portal endpoints - CRITICAL: Match actual controller paths
+                        .requestMatchers("/api/courses/**").hasAnyRole("ADMIN", "ME_OFFICER")
+                        .requestMatchers("/api/cohorts/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
+                        .requestMatchers("/api/participants/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
+                        .requestMatchers("/api/analytics/**").hasAnyRole("ADMIN", "ME_OFFICER", "DONOR")
+                        // Facilitator specific endpoints
+                        .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR")
+                        // ME_OFFICER specific endpoints
+                        .requestMatchers("/api/me-officer/**").hasRole("ME_OFFICER")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // Allow sessions for form login and OAuth2
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless for JWT
                 );
         
-        // Configure form login first (uses default login page)
-        http.formLogin(Customizer.withDefaults());
-        
         // Configure OAuth2 login if ClientRegistrationRepository bean is available
-        // Spring Security automatically adds OAuth2 login links to the default login page
-        // when OAuth2 is configured - no need to explicitly set loginPage
         if (clientRegistrationRepository != null) {
             http.oauth2Login(oauth2 -> oauth2
                     .defaultSuccessUrl("/", true) // Redirect after successful login
@@ -185,22 +204,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow specific origin (not wildcard when credentials = true)
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:3000",
+            "https://dse-me-a86v.onrender.com"
+        ));
         
-        // Allow specific methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
         
-        // Allow specific headers (Authorization for JWT, Content-Type for JSON)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With"
+        ));
         
-        // Allow credentials for JWT authentication
-        configuration.setAllowCredentials(true);
-        
-        // Expose headers that frontend might need
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        
-        // Cache preflight response for 1 hour
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

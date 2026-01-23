@@ -1,8 +1,9 @@
 package com.dseme.app.enums;
 
 public enum Role {
-    PARTNER,            //MasterCard
-    ME_OFFICER,         //Organisations
+    ADMIN,
     FACILITATOR,        //Participant Instructor
-    UNASSIGNED          //Intermediate Role
+    ME_OFFICER,         //Partner M&E Officers
+    DONOR,              //MasterCard Foundation
+    UNASSIGNED          //Default role for new users
 }

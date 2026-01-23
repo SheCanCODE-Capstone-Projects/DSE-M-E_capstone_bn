@@ -1,4 +1,4 @@
-CREATE TABLE role_requests
+CREATE TABLE IF NOT EXISTS role_requests
 (
     id UUID PRIMARY KEY,
     requester_id   UUID NOT NULL,
