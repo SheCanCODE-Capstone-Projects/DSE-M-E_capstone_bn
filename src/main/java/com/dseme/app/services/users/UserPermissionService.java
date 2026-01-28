@@ -60,12 +60,12 @@ public class UserPermissionService {
 
 //        // Validate approver has authority over the request's scope
 //        if (request.getRequestedRole() == Role.FACILITATOR) {
-//            // Verify approver is ME_OFFICER or PARTNER for the same center
+//            // Verify approver is ME_OFFICER or DONOR for the same center
 //            if (!approver.getCenter().equals(request.getCenter())) {
 //                throw new AccessDeniedException("You are not authorized to approve requests for this center");
 //            }
 //        } else {
-//            // Verify approver is PARTNER for the same partner organization
+//            // Verify approver is DONOR for the same partner organization
 //            if (!approver.getPartner().equals(request.getPartner())) {
 //                throw new AccessDeniedException("You are not authorized to approve requests for this partner");
 //            }

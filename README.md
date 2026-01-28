@@ -26,9 +26,10 @@ A comprehensive multi-tenant digital system designed to support effective monito
 
 The DSE M&E Platform provides role-based access control with strict data isolation:
 
+- **ADMIN**: System administrator with full access
 - **FACILITATOR**: Center-level access, manages participants in their active cohort
 - **ME_OFFICER**: Partner-level access, oversees data quality and validation
-- **PARTNER**: Portfolio-wide access, aggregated analytics across all partners
+- **DONOR**: Portfolio-wide access, aggregated analytics across all partners (MasterCard Foundation staff)
 - **UNASSIGNED**: No access until role is approved
 
 ### Core Capabilities
@@ -309,10 +310,10 @@ mvn spring-boot:run
 - ❌ Cannot access other partners' data
 - ❌ Cannot modify facilitator-entered attendance
 - ❌ Cannot create or edit scores directly
-- ❌ Cannot access portfolio-level (PARTNER) analytics
+- ❌ Cannot access portfolio-level (DONOR) analytics
 - ❌ Cannot access raw PII in survey responses (aggregated only)
 
-### 3. PARTNER (MasterCard Foundation - Donor)
+### 3. DONOR (MasterCard Foundation Staff)
 
 **Scope**: Portfolio-wide access  
 **Data Access**: Aggregated data across all partners
@@ -666,13 +667,36 @@ All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can o
 
 ---
 
+## 🏗️ System Architecture
+
+### Dual System Architecture
+
+The platform supports two distinct but complementary systems:
+
+1. **ME Portal System** (`/api/me/*`)
+   - Uses `Course` and `MeCohort` models
+   - Separate from the main M&E system
+   - Managed by ADMIN and ME_OFFICER roles
+   - Tables: `courses`, `me_cohorts`, `me_participants`
+   - Endpoints: `/api/me/courses`, `/api/me/cohorts`, `/api/me/facilitators`, `/api/me/analytics`
+
+2. **M&E System** (`/api/facilitator/*`, `/api/me-officer/*`)
+   - Uses `Program`, `Cohort`, and `Participant` models
+   - Main operational system for facilitators and ME_OFFICERs
+   - Tables: `programs`, `cohorts`, `participants`, `enrollments`, `training_modules`
+   - Endpoints: `/api/facilitator/*`, `/api/me-officer/*`
+
+**Note**: These systems operate independently and do not share data. The ME Portal system is designed for course-level management, while the M&E system handles program-level operations with full partner isolation.
+
+---
+
 ## 🗄️ Data Models & Entities
 
 ### Core Entities
 
 1. **User**
    - Authentication and authorization
-   - Role assignment (FACILITATOR, ME_OFFICER, PARTNER, UNASSIGNED)
+   - Role assignment (ADMIN, FACILITATOR, ME_OFFICER, DONOR, UNASSIGNED)
    - Partner/Center assignment
    - Account status (isActive, isVerified)
 
@@ -795,7 +819,7 @@ All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can o
 - ❌ **Cross-Partner Access**: Cannot access other partners' data
 - ❌ **Portfolio-Level Access**: Cannot access aggregated data across partners
 
-#### PARTNER
+#### DONOR
 - ✅ **Portfolio-Level Access**: Can access aggregated data across all partners
 - ❌ **Individual Data Access**: Cannot access individual participant data
 - ❌ **Partner-Specific Details**: Cannot access partner-specific operational details
@@ -817,7 +841,7 @@ All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can o
 - ❌ Access portfolio-level analytics
 - ❌ Access raw PII in survey responses (aggregated only)
 
-#### PARTNER Cannot:
+#### DONOR Cannot:
 - ❌ Perform operational data entry
 - ❌ Access individual participant data
 - ❌ Access partner-specific operational details
@@ -872,19 +896,22 @@ The application uses Flyway for database migrations. All migration files are loc
 - `V20__add_assessment_name_to_scores.sql` - Assessment name
 - `V21__add_dates_to_surveys.sql` - Survey dates
 - `V22__make_survey_response_submitted_at_nullable.sql` - Nullable submission
-- `V23__add_max_score_and_assessment_date_to_scores.sql` - Score enhancements
-- `V24__create_audit_logs_table.sql` - Audit logs table
-- `V25__create_internships_table.sql` - Internships table
-- `V26__create_employment_outcomes_table.sql` - Employment outcomes table
-- `V27__update_employment_status_enum.sql` - Employment status enum
-- `V28__add_monthly_amount_to_employment_outcomes.sql` - Monthly amount
-- `V29__add_verification_to_participants.sql` - Participant verification
-- `V30__add_validation_to_scores.sql` - Score validation
-- `V31__create_report_snapshots_table.sql` - Report snapshots table
-- `V32__create_module_assignments_table.sql` - Module assignments table
-- `V33__add_module_id_to_enrollments.sql` - Module ID in enrollments
-- `V34__create_alerts_table.sql` - System alerts table
-- `V35__add_created_by_to_employment_outcomes.sql` - Created by field in employment outcomes
+- `V23__update_role_enum_constraints_and_backfill.sql` - Role enum migration (PARTNER → DONOR, ADMIN added)
+- `V24__add_max_score_and_assessment_date_to_scores.sql` - Score enhancements
+- `V25__create_audit_logs_table.sql` - Audit logs table
+- `V26__create_internships_table.sql` - Internships table
+- `V27__create_employment_outcomes_table.sql` - Employment outcomes table
+- `V28__update_employment_status_enum.sql` - Employment status enum
+- `V29__add_monthly_amount_to_employment_outcomes.sql` - Monthly amount
+- `V30__add_verification_to_participants.sql` - Participant verification
+- `V31__add_validation_to_scores.sql` - Score validation
+- `V32__create_report_snapshots_table.sql` - Report snapshots table
+- `V33__create_module_assignments_table.sql` - Module assignments table
+- `V34__add_module_id_to_enrollments.sql` - Module ID in enrollments
+- `V35__create_alerts_table.sql` - System alerts table
+- `V36__add_created_by_to_employment_outcomes.sql` - Created by field in employment outcomes
+- `V37__drop_otp_column.sql` - Remove OTP column from forgotpassword table
+- `V38__fix_notifications_table.sql` - Fix notifications table constraints
 
 ---
 
@@ -1002,8 +1029,7 @@ For issues, questions, or contributions, please open an issue on GitHub.
 - ✅ Data consistency alerts
 
 ### Planned ⚠️
-- ⚠️ PARTNER role implementation
-- ⚠️ Portfolio-wide dashboard
+- ⚠️ DONOR role implementation (portfolio-wide dashboard)
 - ⚠️ Advanced analytics
 - ⚠️ Real-time notifications
 - ⚠️ Mobile app support
