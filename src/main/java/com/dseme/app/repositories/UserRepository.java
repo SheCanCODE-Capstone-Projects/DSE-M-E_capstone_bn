@@ -38,4 +38,11 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
             @Param("role") Role role,
             @Param("partnerId") String partnerId
     );
+    
+    /**
+     * Find all users by role.
+     * Used for DONOR notification and dashboard services.
+     */
+    @Query("SELECT u FROM User u WHERE u.role = :role")
+    List<User> findByRole(@Param("role") Role role);
 }

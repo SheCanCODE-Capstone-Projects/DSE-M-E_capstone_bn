@@ -319,15 +319,28 @@ mvn spring-boot:run
 **Data Access**: Aggregated data across all partners
 
 **Capabilities**:
-- ⚠️ Portfolio-wide dashboard (planned)
-- ⚠️ Aggregated survey analytics (planned)
-- ⚠️ Cross-partner reporting (planned)
-- ⚠️ Performance metrics (planned)
+- ✅ Portfolio-wide dashboard with key metrics and summaries
+- ✅ Partner organization management (create, view, update, activate/deactivate)
+- ✅ Portfolio-level analytics:
+  - Enrollment KPIs (total, growth, by partner, by program)
+  - Completion & dropout metrics
+  - Employment outcomes (by partner, by cohort, conversion rates)
+  - Longitudinal impact tracking (baseline vs endline vs tracer)
+  - Demographic & inclusion metrics (gender, disability, education)
+  - Regional analytics (center, region, country)
+  - Survey impact summaries (completion rates, sentiment analysis)
+- ✅ Program & Cohort visibility (list and view details with metrics)
+- ✅ Center visibility (list and view details with metrics)
+- ✅ Notification management (view, filter, mark as read)
+- ✅ Alert management (view KPI alerts, resolve alerts)
+- ✅ Report exports (CSV, PDF) with scheduled generation
+- ✅ Audit log visibility with filtering
+- ✅ KPI anomaly detection (automated alerts for dropout spikes, low employment, enrollment stagnation)
 
 **Restrictions**:
-- ❌ Cannot access individual participant data
-- ❌ Cannot access partner-specific details
-- ❌ Cannot perform operational data entry
+- ❌ Cannot access individual participant data (aggregated only)
+- ❌ Cannot perform operational data entry (read-only analytics)
+- ❌ Cannot modify partner data directly (only through partner management endpoints)
 
 ### 4. UNASSIGNED
 
@@ -604,6 +617,75 @@ All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can o
 |--------|----------|-------------|--------|
 | GET | `/api/me-officer/dashboard` | Get dashboard overview with key metrics | ✅ |
 
+### DONOR Endpoints (`/api/donor/**`)
+
+#### Dashboard
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/dashboard` | Get portfolio-wide dashboard with summary metrics | ✅ |
+
+#### Partner Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| POST | `/api/donor/partners` | Create new partner organization | ✅ |
+| GET | `/api/donor/partners` | Get all partners with metrics | ✅ |
+| GET | `/api/donor/partners/{partnerId}` | Get partner details by ID | ✅ |
+| PUT | `/api/donor/partners/{partnerId}` | Update partner information | ✅ |
+| PATCH | `/api/donor/partners/{partnerId}/status` | Activate/deactivate partner | ✅ |
+
+#### Analytics
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/analytics/enrollments` | Get enrollment KPIs (total, growth, by partner/program) | ✅ |
+| GET | `/api/donor/analytics/completion` | Get completion & dropout metrics | ✅ |
+| GET | `/api/donor/analytics/employment` | Get employment outcomes (by partner/cohort, conversion) | ✅ |
+| GET | `/api/donor/analytics/longitudinal` | Get longitudinal impact tracking (baseline/endline/tracer) | ✅ |
+| GET | `/api/donor/analytics/demographics` | Get demographic breakdowns (gender, disability, education) | ✅ |
+| GET | `/api/donor/analytics/regions` | Get regional analytics (center/region/country) | ✅ |
+| GET | `/api/donor/analytics/surveys` | Get survey impact summaries (completion, sentiment) | ✅ |
+
+#### Visibility (Programs, Cohorts, Centers)
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/programs` | List all programs with filtering | ✅ |
+| GET | `/api/donor/programs/{id}` | Get program details with cohort list | ✅ |
+| GET | `/api/donor/cohorts` | List all cohorts with filtering | ✅ |
+| GET | `/api/donor/cohorts/{id}` | Get cohort details with metrics | ✅ |
+| GET | `/api/donor/centers` | List all centers with filtering | ✅ |
+| GET | `/api/donor/centers/{id}` | Get center details with cohort list | ✅ |
+
+#### Notifications
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/notifications` | Get notifications with filtering | ✅ |
+| PATCH | `/api/donor/notifications/{id}/read` | Mark notification as read | ✅ |
+| PATCH | `/api/donor/notifications/read-all` | Mark all notifications as read | ✅ |
+
+#### Alerts
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/alerts` | Get KPI alerts with filtering | ✅ |
+| GET | `/api/donor/alerts/{id}` | Get alert details | ✅ |
+| PATCH | `/api/donor/alerts/{id}/resolve` | Resolve alert | ✅ |
+
+#### Reports
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/reports/export` | Export reports (CSV/PDF) | ✅ |
+
+#### Audit Logs
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/donor/audit-logs` | Get audit logs with filtering | ✅ |
+
 ### Other Endpoints
 
 | Method | Endpoint | Description | Status |
@@ -649,10 +731,16 @@ All ME_OFFICER endpoints enforce partner-level data isolation. ME_OFFICERs can o
    - Validates partner assignment
    - Stores context in request attributes
 
+3. **DonorAuthorizationFilter**
+   - Loads DONOR context
+   - Validates DONOR role (no partner restriction)
+   - Stores context in request attributes
+
 ### Security Rules
 
 - `/api/facilitator/**` → Requires `ROLE_FACILITATOR`
 - `/api/me-officer/**` → Requires `ROLE_ME_OFFICER`
+- `/api/donor/**` → Requires `ROLE_DONOR`
 - `/api/auth/**` → Public (except protected endpoints)
 - `/health` → Public
 - `/swagger-ui/**` → Public (for development)

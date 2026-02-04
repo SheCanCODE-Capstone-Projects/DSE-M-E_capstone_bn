@@ -39,5 +39,12 @@ public interface CohortRepository extends JpaRepository<Cohort, UUID> {
      * Used to check uniqueness.
      */
     java.util.Optional<Cohort> findByCohortName(String cohortName);
+    
+    /**
+     * Count cohorts by program's partner ID.
+     * Used for partner metrics.
+     */
+    @Query("SELECT COUNT(c) FROM Cohort c WHERE c.program.partner.partnerId = :partnerId")
+    long countByProgramPartnerPartnerId(@Param("partnerId") String partnerId);
 }
 

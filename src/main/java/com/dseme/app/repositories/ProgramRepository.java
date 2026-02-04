@@ -14,4 +14,10 @@ public interface ProgramRepository extends JpaRepository<Program, UUID> {
      * Used for partner-level program queries.
      */
     List<Program> findByPartnerPartnerId(String partnerId);
+    
+    /**
+     * Count programs by partner ID.
+     * Used for partner metrics.
+     */
+    long countByPartnerPartnerId(String partnerId);
 }

@@ -1,4 +1,5 @@
 package com.dseme.app.configurations;
+import com.dseme.app.filters.DonorAuthorizationFilter;
 import com.dseme.app.filters.FacilitatorAuthorizationFilter;
 import com.dseme.app.filters.JwtAuthenticationFilter;
 import com.dseme.app.filters.MEOfficerAuthorizationFilter;
@@ -49,6 +50,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter authenticationJwtTokenFilter;
     private final FacilitatorAuthorizationFilter facilitatorAuthorizationFilter;
     private final MEOfficerAuthorizationFilter meOfficerAuthorizationFilter;
+    private final DonorAuthorizationFilter donorAuthorizationFilter;
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
     private final CustomOAuth2FailureHandler customOAuth2FailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -168,6 +170,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR")
                         // ME_OFFICER specific endpoints
                         .requestMatchers("/api/me-officer/**").hasRole("ME_OFFICER")
+                        // DONOR specific endpoints
+                        .requestMatchers("/api/donor/**").hasRole("DONOR")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -190,7 +194,8 @@ public class SecurityConfig {
         http.addFilterBefore(authenticationJwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 // Authorization filters run after JWT auth to validate role-specific access
                 .addFilterAfter(facilitatorAuthorizationFilter, JwtAuthenticationFilter.class)
-                .addFilterAfter(meOfficerAuthorizationFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(meOfficerAuthorizationFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(donorAuthorizationFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
