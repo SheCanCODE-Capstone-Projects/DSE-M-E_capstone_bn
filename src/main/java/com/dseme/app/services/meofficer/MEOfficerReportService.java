@@ -82,15 +82,29 @@ public class MEOfficerReportService {
                 request.getFormat().toUpperCase() : "CSV";
 
         // Generate report data (CSV format internally)
-        byte[] csvData = switch (reportType) {
-            case "PARTICIPANTS" -> exportParticipantsReport(context, request);
-            case "ATTENDANCE" -> exportAttendanceReport(context, request);
-            case "SCORES" -> exportScoresReport(context, request);
-            case "OUTCOMES" -> exportOutcomesReport(context, request);
-            case "SURVEYS" -> exportSurveysReport(context, request);
-            case "COMPREHENSIVE" -> exportComprehensiveReport(context, request);
-            default -> throw new IllegalArgumentException("Invalid report type: " + reportType);
-        };
+        byte[] csvData;
+        switch (reportType) {
+            case "PARTICIPANTS":
+                csvData = exportParticipantsReport(context, request);
+                break;
+            case "ATTENDANCE":
+                csvData = exportAttendanceReport(context, request);
+                break;
+            case "SCORES":
+                csvData = exportScoresReport(context, request);
+                break;
+            case "OUTCOMES":
+                csvData = exportOutcomesReport(context, request);
+                break;
+            case "SURVEYS":
+                csvData = exportSurveysReport(context, request);
+                break;
+            case "COMPREHENSIVE":
+                csvData = exportComprehensiveReport(context, request);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid report type: " + reportType);
+        }
 
         // Convert to PDF if requested
         if ("PDF".equals(format)) {

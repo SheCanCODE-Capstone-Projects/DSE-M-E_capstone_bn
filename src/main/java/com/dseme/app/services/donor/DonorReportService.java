@@ -14,11 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * Service for DONOR report generation and export.
@@ -54,13 +52,23 @@ public class DonorReportService {
                 request.getFormat().toUpperCase() : "CSV";
 
         // Generate report data (CSV format internally)
-        byte[] csvData = switch (reportType) {
-            case "ENROLLMENT" -> exportEnrollmentReport(context, request);
-            case "EMPLOYMENT" -> exportEmploymentReport(context, request);
-            case "DEMOGRAPHIC" -> exportDemographicReport(context, request);
-            case "COMPREHENSIVE" -> exportComprehensiveReport(context, request);
-            default -> throw new IllegalArgumentException("Invalid report type: " + reportType);
-        };
+        byte[] csvData;
+        switch (reportType) {
+            case "ENROLLMENT":
+                csvData = exportEnrollmentReport(context, request);
+                break;
+            case "EMPLOYMENT":
+                csvData = exportEmploymentReport(context, request);
+                break;
+            case "DEMOGRAPHIC":
+                csvData = exportDemographicReport(context, request);
+                break;
+            case "COMPREHENSIVE":
+                csvData = exportComprehensiveReport(context, request);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid report type: " + reportType);
+        }
 
         // Convert to PDF if requested
         if ("PDF".equals(format)) {
