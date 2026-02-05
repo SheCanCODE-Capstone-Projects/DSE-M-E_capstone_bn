@@ -76,6 +76,29 @@ public class EmailService {
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
+
+    /**
+     * Generic method to send HTML email.
+     */
+    public void sendEmail(String to, String subject, String htmlContent) {
+        if (to == null || to.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email address cannot be null or empty");
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(to);
+            helper.setFrom(fromEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
 }
 
 //    public void sendPasswordResetLink(String to, String link) {

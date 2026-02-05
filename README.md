@@ -129,7 +129,7 @@ The DSE M&E Platform provides role-based access control with strict data isolati
 
 ```
 src/
-└── main/
+└── main/        
     └── java/
         └── com.dseme.app/
             ├── controllers/              # REST API endpoints
@@ -163,11 +163,13 @@ src/
 
 ### Prerequisites
 
-- Java 17 or higher
+- **Java 17** (⚠️ Required - Java 24+ will cause compilation errors)
 - Maven 3.8+
 - PostgreSQL 14+
 - Git
 - Docker (optional, for containerized deployment)
+
+**⚠️ Important**: This project requires Java 17. Java 24 or higher is NOT compatible and will cause compilation failures. See `QUICK_FIX_GUIDE.md` for Java version troubleshooting.
 
 ### Step 1: Clone the Repository
 
@@ -178,10 +180,10 @@ cd DSE-M-E_capstone_bn
 
 ### Step 2: Database Setup
 
-Create a PostgreSQL database:
-
+    Create a PostgreSQL database:
+    
 ```sql
-CREATE DATABASE dse_me;
+    CREATE DATABASE dse_me;
 ```
 
 ### Step 3: Environment Variables
@@ -216,13 +218,13 @@ GOOGLE_REDIRECT_URI=http://localhost:8088/login/oauth2/code/google
 ### Step 4: Install Dependencies
 
 ```bash
-mvn clean install
+   mvn clean install
 ```
 
 ### Step 5: Run the Application
 
 ```bash
-./mvnw spring-boot:run
+   ./mvnw spring-boot:run
 ```
 
 Or using Maven:
@@ -375,6 +377,45 @@ mvn spring-boot:run
 | POST | `/api/users/request/role` | Request role approval | ✅ |
 | POST | `/api/users/request/approve/{requestId}` | Approve role request | ✅ |
 | POST | `/api/users/request/reject/{requestId}` | Reject role request | ✅ |
+
+### User Account Management Endpoints (Authenticated - All Roles)
+
+**Note**: All authenticated users can manage their own accounts. Users can only modify their own data (strict isolation enforced).
+
+#### Profile Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/users/profile` | Get current user profile | ✅ |
+| PUT | `/api/users/profile` | Update user profile (firstName, lastName) | ✅ |
+| PATCH | `/api/users/profile` | Partially update user profile | ✅ |
+
+#### Password Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| PUT | `/api/users/password` | Change password (requires current password) | ✅ |
+
+#### Email Management
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| PUT | `/api/users/email` | Request email change (sends verification to new email) | ✅ |
+| POST | `/api/users/email/verify` | Verify email change with token | ✅ |
+
+#### Account Status
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/users/status` | Get account status and information | ✅ |
+| POST | `/api/users/deactivate` | Deactivate own account (soft delete) | ✅ |
+
+#### Settings & Preferences
+
+| Method | Endpoint | Description | Status |
+|--------|----------|-------------|--------|
+| GET | `/api/users/settings` | Get user settings and preferences | ✅ |
+| PUT | `/api/users/settings` | Update user settings and preferences | ✅ |
 
 ### Facilitator Endpoints (Requires `ROLE_FACILITATOR`)
 
@@ -1000,6 +1041,7 @@ The application uses Flyway for database migrations. All migration files are loc
 - `V36__add_created_by_to_employment_outcomes.sql` - Created by field in employment outcomes
 - `V37__drop_otp_column.sql` - Remove OTP column from forgotpassword table
 - `V38__fix_notifications_table.sql` - Fix notifications table constraints
+- `V39__create_email_change_tokens_table.sql` - Email change tokens table for email change requests
 
 ---
 

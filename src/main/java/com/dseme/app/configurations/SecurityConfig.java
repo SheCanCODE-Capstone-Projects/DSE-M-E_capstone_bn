@@ -155,9 +155,9 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/oauth2/**"
                         ).permitAll()
-                        // UNASSIGNED users can only request roles and view profile
+                        // User account management - all authenticated users can manage their own accounts
                         .requestMatchers("/api/users/request/role").hasRole("UNASSIGNED")
-                        .requestMatchers("/api/users/profile").authenticated()
+                        .requestMatchers("/api/users/**").authenticated() // All user account endpoints accessible to authenticated users
                         // ADMIN has full access
                         .requestMatchers("/api/access-requests/**").hasRole("ADMIN")
                         .requestMatchers("/api/facilitators/**").hasRole("ADMIN")
