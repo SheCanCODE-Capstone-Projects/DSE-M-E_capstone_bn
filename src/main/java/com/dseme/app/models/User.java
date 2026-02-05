@@ -63,9 +63,10 @@ public class User{
     @JoinColumn(name = "center_id")
     private Center center;
 
-    @Column(name = "provider")
+    @Builder.Default
+    @Column(name = "provider", nullable = false)
     @Enumerated(EnumType.STRING)
-    private Provider provider;
+    private Provider provider = Provider.LOCAL;
 
     @PrePersist
     protected void onCreate() {

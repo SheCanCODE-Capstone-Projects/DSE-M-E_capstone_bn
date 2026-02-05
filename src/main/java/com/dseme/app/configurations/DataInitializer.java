@@ -1,5 +1,6 @@
 package com.dseme.app.configurations;
 
+import com.dseme.app.enums.Provider;
 import com.dseme.app.enums.Role;
 import com.dseme.app.models.User;
 import com.dseme.app.repositories.UserRepository;
@@ -46,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
                 .firstName("System")
                 .lastName("Administrator")
                 .role(Role.ADMIN)
+                .provider(Provider.LOCAL)
                 .isActive(true)
                 .isVerified(true)
                 .build();
