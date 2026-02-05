@@ -1,15 +1,21 @@
-# -------- BUILD STAGE --------
-FROM maven:3.9.9-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
+FROM openjdk:17-jdk-slim
 
-# -------- RUN STAGE --------
-FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
-# Railway automatically sets PORT environment variable
-# The application.yaml uses ${PORT:8088} which will pick it up
-EXPOSE ${PORT:-8088}
-ENTRYPOINT ["java","-jar","app.jar"]
+
+# Copy Maven wrapper and pom.xml
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src src
+
+# Build application
+RUN ./mvnw clean package -DskipTests
+
+# Run application
+EXPOSE 8088
+CMD ["java", "-jar", "target/app-0.0.1-SNAPSHOT.jar"]

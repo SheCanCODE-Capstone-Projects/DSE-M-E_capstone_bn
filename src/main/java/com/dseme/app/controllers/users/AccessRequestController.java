@@ -26,7 +26,6 @@ public class AccessRequestController {
 
     @PostMapping("/users/request/role")
     @Operation(summary = "Request a role (UNASSIGNED users only)")
-    @PreAuthorize("hasRole('UNASSIGNED')")
     public ResponseEntity<AccessRequestResponseDTO> requestRole(@Valid @RequestBody RoleRequestDTO dto) {
         AccessRequestResponseDTO response = accessRequestService.createRoleRequest(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

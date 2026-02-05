@@ -2,6 +2,7 @@ package com.dseme.app.controllers.auth;
 
 import com.dseme.app.dtos.auth.ForgotPasswordDTO;
 import com.dseme.app.dtos.auth.LoginDTO;
+import com.dseme.app.dtos.auth.LoginResponseDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.dtos.auth.ResetPasswordDTO;
 import com.dseme.app.services.auth.AuthService;
@@ -38,8 +39,9 @@ public class AuthController {
 
     // ================= LOGIN =================
     @PostMapping("/login")
-    public String login(@Valid @RequestBody LoginDTO loginDTO) {
-        return authService.login(loginDTO);
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
+        LoginResponseDTO response = authService.login(loginDTO);
+        return ResponseEntity.ok(response);
     }
 
     // ================= FORGOT PASSWORD =================
@@ -56,12 +58,17 @@ public class AuthController {
 
     // ================= EMAIL VERIFICATION =================
     @GetMapping("/verify")
-    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String token) {
+        Map<String, Object> response = new HashMap<>();
         boolean verified = verificationService.verifyEmail(token);
+        
         if (verified) {
-            return ResponseEntity.ok("Email verified successfully");
+            response.put("message", "Email verified successfully");
+            response.put("redirectTo", "/request-role");
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.badRequest().body("Invalid or expired verification token");
+            response.put("error", "Invalid or expired verification token");
+            return ResponseEntity.badRequest().body(response);
         }
     }
 

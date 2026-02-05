@@ -35,10 +35,34 @@ public class AccessRequestService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Validate user eligibility for role requests
+        if (user.getRole() != Role.UNASSIGNED) {
+            throw new IllegalStateException("Only UNASSIGNED users can request roles");
+        }
+        
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new IllegalStateException("User account is not active");
+        }
+        
+        if (!Boolean.TRUE.equals(user.getIsVerified())) {
+            throw new IllegalStateException("User email is not verified");
+        }
+
+        // Validate requested role based on hierarchy
+        Role requestedRole = Role.valueOf(dto.getRequestedRole().toUpperCase());
+        if (requestedRole == Role.ADMIN || requestedRole == Role.UNASSIGNED) {
+            throw new IllegalArgumentException("Cannot request ADMIN or UNASSIGNED roles");
+        }
+        
+        // Only FACILITATOR, DONOR, and ME_OFFICER can be requested
+        if (requestedRole != Role.FACILITATOR && requestedRole != Role.DONOR && requestedRole != Role.ME_OFFICER) {
+            throw new IllegalArgumentException("Invalid role requested. Only FACILITATOR, DONOR, and ME_OFFICER roles can be requested");
+        }
+
         AccessRequest request = AccessRequest.builder()
                 .requesterEmail(user.getEmail())
                 .requesterName(user.getFirstName() + " " + user.getLastName())
-                .requestedRole(Role.valueOf(dto.getRequestedRole().toUpperCase()))
+                .requestedRole(requestedRole)
                 .reason(dto.getReason())
                 .status(RequestStatus.PENDING)
                 .build();

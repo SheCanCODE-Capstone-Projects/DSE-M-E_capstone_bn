@@ -2,6 +2,7 @@ package com.dseme.app.services.auth;
 
 import com.dseme.app.dtos.auth.ForgotPasswordDTO;
 import com.dseme.app.dtos.auth.LoginDTO;
+import com.dseme.app.dtos.auth.LoginResponseDTO;
 import com.dseme.app.dtos.auth.RegisterDTO;
 import com.dseme.app.dtos.auth.ResetPasswordDTO;
 import com.dseme.app.enums.Provider;
@@ -67,8 +68,10 @@ public class AuthService {
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setPasswordHash(encoder.encode(dto.getPassword()));
-        user.setFirstName(dto.getFirstName());
-        user.setLastName(dto.getLastName());
+        user.setFirstName(dto.getFirstName() != null && !dto.getFirstName().trim().isEmpty() 
+                ? dto.getFirstName().trim() : "User");
+        user.setLastName(dto.getLastName() != null && !dto.getLastName().trim().isEmpty() 
+                ? dto.getLastName().trim() : "Account");
         user.setRole(Role.UNASSIGNED);
         user.setIsActive(true);  // Allow login with UNASSIGNED role
         user.setIsVerified(false);
@@ -83,7 +86,7 @@ public class AuthService {
     }
 
     // ================= LOGIN =================
-    public String login(LoginDTO dto) {
+    public LoginResponseDTO login(LoginDTO dto) {
 
         User user = userRepo.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
@@ -105,7 +108,31 @@ public class AuthService {
         );
 
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
-        return jwtUtil.generateToken(userDetails.getUsername());
+        String token = jwtUtil.generateToken(userDetails.getUsername());
+        
+        return LoginResponseDTO.builder()
+                .token(token)
+                .role(user.getRole().name())
+                .redirectTo(getRedirectUrl(user.getRole()))
+                .message(user.getRole() == Role.UNASSIGNED ? "Please request a role to access the system" : "Login successful")
+                .build();
+    }
+    
+    private String getRedirectUrl(Role role) {
+        switch (role) {
+            case UNASSIGNED:
+                return "/request-access";
+            case ADMIN:
+                return "/admin/dashboard";
+            case FACILITATOR:
+                return "/facilitator/dashboard";
+            case ME_OFFICER:
+                return "/me/dashboard";
+            case DONOR:
+                return "/donor/dashboard";
+            default:
+                return "/request-access";
+        }
     }
 
     // ================= FORGOT PASSWORD =================

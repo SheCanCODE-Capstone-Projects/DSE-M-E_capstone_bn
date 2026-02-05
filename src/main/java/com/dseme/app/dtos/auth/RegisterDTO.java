@@ -23,11 +23,7 @@ public class RegisterDTO {
     @Size(min = 5, max = 20, message = "password must be between 5 and 20 characters.")
     private String password;
     
-    @NotNull(message = "first name is mandatory")
-    @NotBlank(message = "first name is mandatory")
     private String firstName;
     
-    @NotNull(message = "last name is mandatory")
-    @NotBlank(message = "last name is mandatory")
     private String lastName;
 }

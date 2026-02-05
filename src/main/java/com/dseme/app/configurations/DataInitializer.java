@@ -5,6 +5,7 @@ import com.dseme.app.models.User;
 import com.dseme.app.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,12 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    
+    @Value("${ADMIN_EMAIL:admin@dseme.com}")
+    private String adminEmail;
+    
+    @Value("${ADMIN_PASSWORD:Admin@123}")
+    private String adminPassword;
 
     @Override
     public void run(String... args) {
@@ -23,8 +30,6 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createAdminUser() {
-        String adminEmail = "admin@dseme.com";
-        
         if (userRepository.findByEmail(adminEmail).isPresent()) {
             log.info("Admin user already exists. Skipping creation.");
             return;
@@ -32,7 +37,7 @@ public class DataInitializer implements CommandLineRunner {
 
         User admin = User.builder()
                 .email(adminEmail)
-                .passwordHash(passwordEncoder.encode("Admin@123"))
+                .passwordHash(passwordEncoder.encode(adminPassword))
                 .firstName("System")
                 .lastName("Administrator")
                 .role(Role.ADMIN)
@@ -43,7 +48,6 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(admin);
         log.info("✅ Admin user created successfully:");
         log.info("   Email: {}", adminEmail);
-        log.info("   Password: Admin@123");
         log.info("   Please change the default password after first login.");
     }
 }
