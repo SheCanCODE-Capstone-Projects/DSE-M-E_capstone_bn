@@ -38,3 +38,7 @@ build/
 
 ### Logs ###
 *.log
+
+### Compilation artifacts ###
+compile_errors.txt
+*.txt.bak
