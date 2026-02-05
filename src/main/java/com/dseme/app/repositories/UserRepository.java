@@ -45,4 +45,11 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
      */
     @Query("SELECT u FROM User u WHERE u.role = :role")
     List<User> findByRole(@Param("role") Role role);
+    
+    /**
+     * Find all users by role and active status.
+     * Used for DONOR dashboard and notification services.
+     */
+    @Query("SELECT u FROM User u WHERE u.role = :role AND u.isActive = :isActive")
+    List<User> findByRoleAndIsActive(@Param("role") Role role, @Param("isActive") Boolean isActive);
 }

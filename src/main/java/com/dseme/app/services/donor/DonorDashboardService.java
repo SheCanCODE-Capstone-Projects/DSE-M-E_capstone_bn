@@ -57,7 +57,7 @@ public class DonorDashboardService {
         List<RecentActivityDTO> recentActivities = getRecentActivities();
 
         // Get alert summary
-        AlertSummaryDTO alertSummary = getAlertSummary(context);
+        DashboardAlertSummaryDTO alertSummary = getAlertSummary(context);
 
         // Build quick links
         QuickLinksDTO quickLinks = QuickLinksDTO.builder()
@@ -175,12 +175,12 @@ public class DonorDashboardService {
     /**
      * Gets alert summary from notifications.
      */
-    private AlertSummaryDTO getAlertSummary(DonorContext context) {
+    private DashboardAlertSummaryDTO getAlertSummary(DonorContext context) {
         // Get all DONOR users
         List<User> donorUsers = userRepository.findByRole(com.dseme.app.enums.Role.DONOR);
 
         if (donorUsers.isEmpty()) {
-            return AlertSummaryDTO.builder()
+            return DashboardAlertSummaryDTO.builder()
                     .totalUnresolved(0L)
                     .highPriorityUnresolved(0L)
                     .mediumPriorityUnresolved(0L)
@@ -207,7 +207,7 @@ public class DonorDashboardService {
                 .filter(n -> n.getPriority() == Priority.MEDIUM)
                 .count();
 
-        return AlertSummaryDTO.builder()
+        return DashboardAlertSummaryDTO.builder()
                 .totalUnresolved(totalUnresolved)
                 .highPriorityUnresolved(highPriority)
                 .mediumPriorityUnresolved(mediumPriority)

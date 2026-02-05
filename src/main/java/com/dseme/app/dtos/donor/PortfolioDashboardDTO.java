@@ -31,7 +31,7 @@ public class PortfolioDashboardDTO {
     /**
      * Alert summary (unresolved KPI alerts count).
      */
-    private AlertSummaryDTO alertSummary;
+    private DashboardAlertSummaryDTO alertSummary;
 
     /**
      * Quick links to detailed analytics.
