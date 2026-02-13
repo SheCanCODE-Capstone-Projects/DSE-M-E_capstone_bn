@@ -1,21 +1,22 @@
-FROM openjdk:17-jdk-slim
+# ---------- Build Stage ----------
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml
-COPY mvnw .
-COPY .mvn .mvn
 COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline -B
+COPY src ./src
 
-# Copy source code
-COPY src src
+RUN mvn clean package -DskipTests
 
-# Build application
-RUN ./mvnw clean package -DskipTests
 
-# Run application
+# ---------- Runtime Stage ----------
+FROM eclipse-temurin:17-jdk-jammy
+
+WORKDIR /app
+
+COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8088
-CMD ["java", "-jar", "target/app-0.0.1-SNAPSHOT.jar"]
+
+CMD ["java", "-jar", "app.jar"]
