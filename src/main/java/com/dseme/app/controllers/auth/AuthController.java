@@ -60,16 +60,32 @@ public class AuthController {
     @GetMapping("/verify")
     public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String token) {
         Map<String, Object> response = new HashMap<>();
-        boolean verified = verificationService.verifyEmail(token);
+        String result = verificationService.verifyEmail(token);
         
-        if (verified) {
-            response.put("message", "Email verified successfully");
-            response.put("redirectTo", "/request-role");
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("error", "Invalid or expired verification token");
+        if (result == null) {
+            response.put("error", "Invalid verification token");
             return ResponseEntity.badRequest().body(response);
         }
+        
+        if ("already_verified".equals(result)) {
+            response.put("message", "Email already verified. You can now login.");
+            response.put("redirectTo", "/login");
+            return ResponseEntity.ok(response);
+        }
+        
+        if ("expired".equals(result)) {
+            response.put("error", "Verification token expired");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        if ("success".equals(result)) {
+            response.put("message", "Email verified successfully!");
+            response.put("redirectTo", "/login");
+            return ResponseEntity.ok(response);
+        }
+        
+        response.put("error", "Invalid or expired verification token");
+        return ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/resend-verification")
