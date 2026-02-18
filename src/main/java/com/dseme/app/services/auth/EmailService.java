@@ -22,6 +22,9 @@ public class EmailService {
     @Value("${app.mail.brevo.api-key}")
     private String apiKey;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     private final RestTemplate restTemplate = new RestTemplate();
     private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
@@ -84,7 +87,7 @@ public class EmailService {
 
     public void sendVerificationEmail(String to, String token) {
 
-        String verificationLink = "http://localhost:3000/verify?token=" + token;
+        String verificationLink = frontendUrl + "/verify?token=" + token;
 
         String htmlContent =
                 "<h2>Welcome to DSE!</h2>" +
@@ -97,7 +100,7 @@ public class EmailService {
 
     public void sendPasswordResetLink(String to, String resetToken) {
 
-        String resetLink = "http://localhost:3000/reset-password?token=" + resetToken;
+        String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
 
         String htmlContent =
                 "<h2>Password Reset</h2>" +

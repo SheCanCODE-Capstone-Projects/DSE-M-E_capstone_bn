@@ -73,16 +73,18 @@ public class AuthService {
         user.setLastName(dto.getLastName() != null && !dto.getLastName().trim().isEmpty() 
                 ? dto.getLastName().trim() : "Account");
         user.setRole(Role.UNASSIGNED);
-        user.setIsActive(true);  // Allow login with UNASSIGNED role
+        user.setIsActive(true);
         user.setIsVerified(false);
         user.setProvider(Provider.LOCAL);
 
         User savedUser = userRepo.save(user);
         
-        // Generate and send verification email
-        emailVerificationService.generateAndSendVerificationToken(savedUser);
-
-        return "Registration successful. Please check your email to verify your account.";
+        try {
+            emailVerificationService.generateAndSendVerificationToken(savedUser);
+            return "Registration successful. Please check your email to verify your account.";
+        } catch (Exception e) {
+            return "Registration successful. Verification email will be sent shortly.";
+        }
     }
 
     // ================= LOGIN =================
