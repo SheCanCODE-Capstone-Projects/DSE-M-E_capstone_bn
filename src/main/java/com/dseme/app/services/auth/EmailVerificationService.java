@@ -59,29 +59,35 @@ public class EmailVerificationService {
         rateLimitMap.put(user.getEmail(), Instant.now());
     }
 
-    public boolean verifyEmail(String token) {
+    public String verifyEmail(String token) {
         Optional<EmailVerificationToken> tokenOpt = tokenRepository.findByToken(token);
         
         if (tokenOpt.isEmpty()) {
-            return false;
+            return null; // Token not found
         }
 
         EmailVerificationToken verificationToken = tokenOpt.get();
+        User user = verificationToken.getUser();
         
+        // Check if already verified
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            return "already_verified";
+        }
+        
+        // Check if token expired
         if (verificationToken.isExpired()) {
             tokenRepository.delete(verificationToken);
-            return false;
+            return "expired";
         }
 
         // Mark user as verified
-        User user = verificationToken.getUser();
         user.setIsVerified(true);
         userRepository.save(user);
 
         // Delete the token
         tokenRepository.delete(verificationToken);
         
-        return true;
+        return "success";
     }
 
     public void resendVerificationEmail(String email) {
