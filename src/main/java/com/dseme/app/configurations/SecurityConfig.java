@@ -199,7 +199,7 @@ public class SecurityConfig {
         
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:3000",
-            "https://dse-me-a86v.onrender.com"
+            "https://dse-me-platform.vercel.app"
         ));
         
         configuration.setAllowedMethods(Arrays.asList(

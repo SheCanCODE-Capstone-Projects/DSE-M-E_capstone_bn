@@ -60,16 +60,38 @@ public class AuthController {
     @GetMapping("/verify")
     public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String token) {
         Map<String, Object> response = new HashMap<>();
-        boolean verified = verificationService.verifyEmail(token);
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthController.class);
+        logger.info("API Call: GET /api/auth/verify with token: {}", token);
         
-        if (verified) {
-            response.put("message", "Email verified successfully");
-            response.put("redirectTo", "/request-role");
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("error", "Invalid or expired verification token");
+        String result = verificationService.verifyEmail(token);
+        logger.info("Verification result: {}", result);
+        
+        if (result == null) {
+            logger.error("Token not found: {}", token);
+            response.put("error", "Invalid verification token");
+            response.put("details", "The token was not found. Please ensure you used the correct verification link.");
             return ResponseEntity.badRequest().body(response);
         }
+        
+        if ("already_verified".equals(result)) {
+            response.put("message", "Email already verified. You can now login.");
+            response.put("redirectTo", "/login");
+            return ResponseEntity.ok(response);
+        }
+        
+        if ("expired".equals(result)) {
+            response.put("error", "Verification token expired");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        if ("success".equals(result)) {
+            response.put("message", "Email verified successfully!");
+            response.put("redirectTo", "/login");
+            return ResponseEntity.ok(response);
+        }
+        
+        response.put("error", "Invalid or expired verification token");
+        return ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/resend-verification")

@@ -58,6 +58,8 @@ public class AuthService {
     // ================= REGISTER =================
     @Transactional
     public String register(RegisterDTO dto) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+        logger.info("Registering new user with email: {}", dto.getEmail());
 
         if (userRepo.existsByEmail(dto.getEmail())) {
             throw new ResourceAlreadyExistsException(
@@ -73,16 +75,21 @@ public class AuthService {
         user.setLastName(dto.getLastName() != null && !dto.getLastName().trim().isEmpty() 
                 ? dto.getLastName().trim() : "Account");
         user.setRole(Role.UNASSIGNED);
-        user.setIsActive(true);  // Allow login with UNASSIGNED role
+        user.setIsActive(true);
         user.setIsVerified(false);
         user.setProvider(Provider.LOCAL);
 
         User savedUser = userRepo.save(user);
+        logger.info("User saved successfully: {}", savedUser.getId());
         
-        // Generate and send verification email
-        emailVerificationService.generateAndSendVerificationToken(savedUser);
-
-        return "Registration successful. Please check your email to verify your account.";
+        try {
+            emailVerificationService.generateAndSendVerificationToken(savedUser);
+            logger.info("Verification token sent successfully for: {}", savedUser.getEmail());
+            return "Registration successful. Please check your email to verify your account.";
+        } catch (Exception e) {
+            logger.error("Failed to generate/send verification token: {}", e.getMessage(), e);
+            throw new RuntimeException("Registration failed: " + e.getMessage());
+        }
     }
 
     // ================= LOGIN =================
@@ -112,6 +119,7 @@ public class AuthService {
         
         return LoginResponseDTO.builder()
                 .token(token)
+                .userId(user.getId().toString())
                 .role(user.getRole().name())
                 .redirectTo(getRedirectUrl(user.getRole()))
                 .message(user.getRole() == Role.UNASSIGNED ? "Please request a role to access the system" : "Login successful")
@@ -138,10 +146,13 @@ public class AuthService {
     // ================= FORGOT PASSWORD =================
     @Transactional
     public String forgotPassword(ForgotPasswordDTO dto) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+        logger.info("Processing forgot password request for email: {}", dto.getEmail());
 
         User user = userRepo.findByEmail(dto.getEmail()).orElse(null);
 
         if (user != null) {
+            logger.info("User found: {}", dto.getEmail());
             forgotPasswordRepo.deleteByUser(user);
 
             int tokenInt = 100000 + random.nextInt(900000);
@@ -152,8 +163,19 @@ public class AuthService {
             fp.setUser(user);
             fp.setExpirationTime(new Date(System.currentTimeMillis() + 2 * 60 * 1000));
 
-            forgotPasswordRepo.save(fp);
-            emailService.sendPasswordResetCode(user.getEmail(), token);
+            Forgotpassword savedFp = forgotPasswordRepo.save(fp);
+            logger.info("Password reset token saved. Token ID: {}, Email: {}", savedFp.getId(), user.getEmail());
+            
+            try {
+                logger.info("Attempting to send password reset code to: {}", user.getEmail());
+                emailService.sendPasswordResetCode(user.getEmail(), token);
+                logger.info("Password reset code email sent successfully to: {}", user.getEmail());
+            } catch (Exception e) {
+                logger.error("Failed to send password reset code email to {}: {}", user.getEmail(), e.getMessage(), e);
+                throw new RuntimeException("Failed to send password reset email: " + e.getMessage(), e);
+            }
+        } else {
+            logger.info("No user found with email: {}. Not revealing this for security.", dto.getEmail());
         }
 
         return "If an account exists, a reset code has been sent";
