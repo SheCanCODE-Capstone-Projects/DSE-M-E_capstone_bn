@@ -14,6 +14,10 @@ public class AccessRequestResponseDTO {
     private String requesterName;
     private String requestedRole;
     private String reason;
+    private String organizationPartnerId;
+    private UUID locationCenterId;
+    private String organizationName;
+    private String locationName;
     private String status;
     private Instant requestedAt;
     private Instant reviewedAt;

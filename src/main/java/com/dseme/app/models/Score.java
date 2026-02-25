@@ -23,12 +23,16 @@ public class Score {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "enrollment_id", nullable = false)
-    private Enrollment enrollment;
+    @JoinColumn(name = "participant_id", nullable = false)
+    private MeParticipant participant;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "module_id", nullable = false)
     private TrainingModule module;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignment_id")
+    private Assignment assignment;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "assessment_type", nullable = false, length = 20)

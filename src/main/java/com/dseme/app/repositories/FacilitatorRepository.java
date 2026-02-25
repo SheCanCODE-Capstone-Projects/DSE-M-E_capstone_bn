@@ -17,7 +17,15 @@ public interface FacilitatorRepository extends JpaRepository<Facilitator, UUID> 
     
     Optional<Facilitator> findByUser(User user);
     
+    Optional<Facilitator> findByUserId(UUID userId);
+    
     Optional<Facilitator> findByEmployeeId(String employeeId);
+    
+    @Query("SELECT f FROM Facilitator f WHERE f.user.partner.partnerId = :partnerId")
+    Page<Facilitator> findByOrganization(@Param("partnerId") String partnerId, Pageable pageable);
+    
+    @Query("SELECT COUNT(f) FROM Facilitator f WHERE f.user.partner.partnerId = :partnerId")
+    long countByOrganization(@Param("partnerId") String partnerId);
     
     @Query("SELECT f FROM Facilitator f WHERE f.user.firstName LIKE %:name% OR f.user.lastName LIKE %:name% OR f.employeeId LIKE %:name%")
     Page<Facilitator> findByNameOrEmployeeId(@Param("name") String name, Pageable pageable);

@@ -55,11 +55,11 @@ public class User{
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "partner_id")
     private Partner partner;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "center_id")
     private Center center;
 
@@ -71,10 +71,25 @@ public class User{
     protected void onCreate() {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
+        validateOrganizationRequirement();
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = Instant.now();
+        validateOrganizationRequirement();
+    }
+    
+    /**
+     * Validates that ME_OFFICER and FACILITATOR roles MUST have an organization.
+     * This ensures no user can have these roles without being under an organization.
+     */
+    private void validateOrganizationRequirement() {
+        if ((this.role == Role.ME_OFFICER || this.role == Role.FACILITATOR) && this.partner == null) {
+            throw new IllegalStateException(
+                "Cannot save user with role " + this.role + " without an organization. " +
+                "ME Officers and Facilitators MUST be associated with an organization."
+            );
+        }
     }
 }

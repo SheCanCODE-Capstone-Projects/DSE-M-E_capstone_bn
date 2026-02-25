@@ -48,6 +48,10 @@ public class Course {
     @Column(name = "status", nullable = false)
     private CourseStatus status = CourseStatus.ACTIVE;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "partner_id")
+    private Partner partner;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

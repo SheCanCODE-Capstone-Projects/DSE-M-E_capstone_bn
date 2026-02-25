@@ -89,8 +89,8 @@ public class ParticipantService {
      * @throws AccessDeniedException if validation fails
      */
     public ParticipantResponseDTO createParticipant(FacilitatorContext context, CreateParticipantDTO dto) {
-        // Validate facilitator has active cohort
-        cohortIsolationService.getFacilitatorActiveCohort(context);
+        // Validate and get the selected cohort
+        com.dseme.app.models.Cohort targetCohort = cohortIsolationService.validateActiveCohortAccess(context, dto.getCohortId());
 
         // Check if participant with email already exists
         if (participantRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -116,15 +116,15 @@ public class ParticipantService {
 
         Participant savedParticipant = participantRepository.save(participant);
 
-        // Create enrollment in facilitator's active cohort
+        // Create enrollment in selected cohort (course)
         Enrollment enrollment = Enrollment.builder()
                 .participant(savedParticipant)
-                .cohort(context.getCohort()) // Must be facilitator's active cohort
+                .cohort(targetCohort) // Enroll in selected course
                 .enrollmentDate(LocalDate.now())
-                .status(EnrollmentStatus.ENROLLED) // Status must be ENROLLED
-                .isVerified(false) // Facilitator cannot set verification flags
-                .verifiedBy(null) // Verification must be done by authorized user
-                .createdBy(context.getFacilitator()) // Audit: who created the enrollment
+                .status(EnrollmentStatus.ENROLLED)
+                .isVerified(false)
+                .verifiedBy(null)
+                .createdBy(context.getFacilitator())
                 .build();
 
         enrollmentRepository.save(enrollment);

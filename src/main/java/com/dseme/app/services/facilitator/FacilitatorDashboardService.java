@@ -2,7 +2,7 @@ package com.dseme.app.services.facilitator;
 
 import com.dseme.app.dtos.facilitator.FacilitatorContext;
 import com.dseme.app.dtos.facilitator.FacilitatorDashboardDTO;
-import com.dseme.app.enums.EnrollmentStatus;
+import com.dseme.app.enums.ParticipantStatus;
 import com.dseme.app.models.*;
 import com.dseme.app.repositories.*;
 import lombok.RequiredArgsConstructor;
@@ -18,95 +18,80 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service for facilitator dashboard data aggregation.
- * 
- * This service provides:
- * - Enrollment statistics
- * - Attendance percentage and alerts
- * - Pending scores
- * - Recent notifications
- * 
- * All data is restricted to facilitator's active cohort.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class FacilitatorDashboardService {
 
-    private final EnrollmentRepository enrollmentRepository;
+    private final MeParticipantRepository participantRepository;
     private final AttendanceRepository attendanceRepository;
     private final NotificationRepository notificationRepository;
     private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
 
-    /**
-     * Gets dashboard data for the facilitator's active cohort.
-     * 
-     * @param context Facilitator context
-     * @return Dashboard DTO with aggregated statistics
-     */
     public FacilitatorDashboardDTO getDashboardData(FacilitatorContext context) {
-        // Validate facilitator has active cohort
-        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
-        
-        // Get all enrollments for the active cohort
-        List<Enrollment> enrollments = enrollmentRepository.findByCohortId(context.getCohortId());
-        
-        // Get all training modules for the cohort's program
-        List<TrainingModule> modules = trainingModuleRepository.findByProgramId(activeCohort.getProgram().getId());
-        
-        // Calculate active participants count (enrollments with status ENROLLED or ACTIVE)
-        Long activeParticipantsCount = calculateActiveParticipantsCount(context.getCohortId());
-        
-        // Calculate weekly attendance statistics
-        FacilitatorDashboardDTO.WeeklyAttendanceStats weeklyAttendance = calculateWeeklyAttendanceStats(
-                context.getCohortId(), activeCohort);
-        
-        // Build dashboard DTO
-        return FacilitatorDashboardDTO.builder()
-                .cohortId(activeCohort.getId())
-                .cohortName(activeCohort.getCohortName())
-                .cohortStartDate(activeCohort.getStartDate())
-                .programName(activeCohort.getProgram().getProgramName())
-                .enrollmentCount((long) enrollments.size())
-                .activeEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.ACTIVE))
-                .completedEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.COMPLETED))
-                .droppedOutEnrollments(countEnrollmentsByStatus(enrollments, EnrollmentStatus.DROPPED_OUT))
-                .activeParticipantsCount(activeParticipantsCount)
-                .totalParticipants((long) enrollments.size())
-                .totalModules((long) modules.size())
-                .weeklyAttendance(weeklyAttendance)
-                .attendancePercentage(calculateAttendancePercentage(enrollments, modules))
-                .totalAttendanceRecords(countTotalAttendanceRecords(enrollments))
-                .expectedAttendanceRecords(calculateExpectedAttendanceRecords(enrollments, modules))
-                .missingAttendanceAlerts(findMissingAttendanceAlerts(enrollments, modules))
-                .pendingScoresCount((long) findPendingScores(enrollments, modules).size())
-                .pendingScores(findPendingScores(enrollments, modules))
-                .averageScore(calculateAverageScore(enrollments))
-                .moduleCompletionRate(calculateModuleCompletionRate(enrollments, modules))
-                .unreadNotificationsCount(countUnreadNotifications(context.getFacilitator()))
-                .recentNotifications(getRecentNotifications(context.getFacilitator()))
-                .completedModules(countCompletedModules(enrollments, modules))
-                .build();
+        try {
+            MeCohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+            
+            List<MeParticipant> participants = participantRepository.findByCohortId(context.getCohortId());
+            
+            List<TrainingModule> modules = activeCohort.getProgram() != null ? 
+                    trainingModuleRepository.findByProgramId(activeCohort.getProgram().getId()) : new ArrayList<>();
+            
+            Long activeParticipantsCount = calculateActiveParticipantsCount(context.getCohortId());
+            
+            FacilitatorDashboardDTO.WeeklyAttendanceStats weeklyAttendance = calculateWeeklyAttendanceStats(
+                    context.getCohortId(), activeCohort);
+            
+            return FacilitatorDashboardDTO.builder()
+                    .cohortId(activeCohort.getId())
+                    .cohortName(activeCohort.getName())
+                    .cohortStartDate(activeCohort.getStartDate())
+                    .programName(activeCohort.getProgram() != null ? activeCohort.getProgram().getProgramName() : "N/A")
+                    .enrollmentCount((long) participants.size())
+                    .activeEnrollments(countParticipantsByStatus(participants, ParticipantStatus.ACTIVE))
+                    .completedEnrollments(countParticipantsByStatus(participants, ParticipantStatus.COMPLETED))
+                    .droppedOutEnrollments(countParticipantsByStatus(participants, ParticipantStatus.DROPPED_OUT))
+                    .activeParticipantsCount(activeParticipantsCount)
+                    .totalParticipants((long) participants.size())
+                    .totalModules((long) modules.size())
+                    .weeklyAttendance(weeklyAttendance)
+                    .attendancePercentage(calculateAttendancePercentage(participants, modules))
+                    .totalAttendanceRecords(countTotalAttendanceRecords(participants))
+                    .expectedAttendanceRecords(calculateExpectedAttendanceRecords(participants, modules))
+                    .missingAttendanceAlerts(findMissingAttendanceAlerts(participants, modules))
+                    .pendingScoresCount((long) findPendingScores(participants, modules).size())
+                    .pendingScores(findPendingScores(participants, modules))
+                    .averageScore(calculateAverageScore(participants))
+                    .moduleCompletionRate(calculateModuleCompletionRate(participants, modules))
+                    .unreadNotificationsCount(countUnreadNotifications(context.getFacilitator()))
+                    .recentNotifications(getRecentNotifications(context.getFacilitator()))
+                    .completedModules(countCompletedModules(participants, modules))
+                    .build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Return empty dashboard on error
+            return FacilitatorDashboardDTO.builder()
+                    .enrollmentCount(0L)
+                    .activeParticipantsCount(0L)
+                    .averageScore(BigDecimal.ZERO)
+                    .weeklyAttendance(FacilitatorDashboardDTO.WeeklyAttendanceStats.builder()
+                            .thisWeekAttendanceRate(BigDecimal.ZERO)
+                            .changeDisplayText("No data")
+                            .build())
+                    .build();
+        }
     }
 
-    /**
-     * Counts enrollments by status.
-     */
-    private Long countEnrollmentsByStatus(List<Enrollment> enrollments, EnrollmentStatus status) {
-        return enrollments.stream()
-                .filter(e -> e.getStatus() == status)
+    private Long countParticipantsByStatus(List<MeParticipant> participants, ParticipantStatus status) {
+        return participants.stream()
+                .filter(p -> p.getStatus() == status)
                 .count();
     }
 
-    /**
-     * Calculates overall attendance percentage.
-     * Formula: (Total attendance records / Expected attendance records) * 100
-     */
-    private BigDecimal calculateAttendancePercentage(List<Enrollment> enrollments, List<TrainingModule> modules) {
-        long totalRecords = countTotalAttendanceRecords(enrollments);
-        long expectedRecords = calculateExpectedAttendanceRecords(enrollments, modules);
+    private BigDecimal calculateAttendancePercentage(List<MeParticipant> participants, List<TrainingModule> modules) {
+        long totalRecords = countTotalAttendanceRecords(participants);
+        long expectedRecords = calculateExpectedAttendanceRecords(participants, modules);
         
         if (expectedRecords == 0) {
             return BigDecimal.ZERO;
@@ -117,59 +102,41 @@ public class FacilitatorDashboardService {
                 .multiply(BigDecimal.valueOf(100));
     }
 
-    /**
-     * Counts total attendance records for all enrollments.
-     */
-    private Long countTotalAttendanceRecords(List<Enrollment> enrollments) {
-        return enrollments.stream()
-                .mapToLong(e -> (long) e.getAttendances().size())
+    private Long countTotalAttendanceRecords(List<MeParticipant> participants) {
+        return participants.stream()
+                .mapToLong(p -> (long) p.getAttendances().size())
                 .sum();
     }
 
-    /**
-     * Calculates expected attendance records.
-     * For simplicity, we assume each enrollment should have attendance for each module.
-     * In a real scenario, this might be based on scheduled sessions.
-     */
-    private Long calculateExpectedAttendanceRecords(List<Enrollment> enrollments, List<TrainingModule> modules) {
-        // Expected = number of enrollments * number of modules
-        // This is a simplified calculation. In reality, you might track scheduled sessions.
-        return (long) enrollments.size() * modules.size();
+    private Long calculateExpectedAttendanceRecords(List<MeParticipant> participants, List<TrainingModule> modules) {
+        return (long) participants.size() * modules.size();
     }
 
-    /**
-     * Finds missing attendance alerts.
-     * Identifies participants who should have attendance records but don't.
-     */
     private List<FacilitatorDashboardDTO.MissingAttendanceAlert> findMissingAttendanceAlerts(
-            List<Enrollment> enrollments, 
+            List<MeParticipant> participants, 
             List<TrainingModule> modules
     ) {
         List<FacilitatorDashboardDTO.MissingAttendanceAlert> alerts = new ArrayList<>();
         
-        // For each enrollment, check if they have attendance for each module
-        for (Enrollment enrollment : enrollments) {
-            // Only check active enrollments
-            if (enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
+        for (MeParticipant participant : participants) {
+            if (participant.getStatus() != ParticipantStatus.ACTIVE) {
                 continue;
             }
             
-            // Get attendance records for this enrollment
-            List<UUID> attendedModuleIds = enrollment.getAttendances().stream()
+            List<UUID> attendedModuleIds = participant.getAttendances().stream()
                     .map(a -> a.getModule().getId())
                     .distinct()
                     .toList();
             
-            // Find modules without attendance
             for (TrainingModule module : modules) {
                 if (!attendedModuleIds.contains(module.getId())) {
                     alerts.add(FacilitatorDashboardDTO.MissingAttendanceAlert.builder()
-                            .participantId(enrollment.getParticipant().getId())
-                            .participantName(enrollment.getParticipant().getFirstName() + " " + 
-                                            enrollment.getParticipant().getLastName())
-                            .enrollmentId(enrollment.getId())
+                            .participantId(participant.getId())
+                            .participantName(participant.getUser().getFirstName() + " " + 
+                                            participant.getUser().getLastName())
+                            .enrollmentId(participant.getId())
                             .moduleName(module.getModuleName())
-                            .sessionDate(LocalDate.now()) // Current date as placeholder
+                            .sessionDate(LocalDate.now())
                             .reason("No attendance recorded for module: " + module.getModuleName())
                             .build());
                 }
@@ -179,40 +146,32 @@ public class FacilitatorDashboardService {
         return alerts;
     }
 
-    /**
-     * Finds pending scores.
-     * Identifies enrollments/modules that don't have scores yet.
-     */
     private List<FacilitatorDashboardDTO.PendingScore> findPendingScores(
-            List<Enrollment> enrollments,
+            List<MeParticipant> participants,
             List<TrainingModule> modules
     ) {
         List<FacilitatorDashboardDTO.PendingScore> pendingScores = new ArrayList<>();
         
-        // For each enrollment, check if they have scores for each module
-        for (Enrollment enrollment : enrollments) {
-            // Only check active enrollments
-            if (enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
+        for (MeParticipant participant : participants) {
+            if (participant.getStatus() != ParticipantStatus.ACTIVE) {
                 continue;
             }
             
-            // Get score records for this enrollment
-            List<UUID> scoredModuleIds = enrollment.getScores().stream()
+            List<UUID> scoredModuleIds = participant.getScores().stream()
                     .map(s -> s.getModule().getId())
                     .distinct()
                     .toList();
             
-            // Find modules without scores
             for (TrainingModule module : modules) {
                 if (!scoredModuleIds.contains(module.getId())) {
                     pendingScores.add(FacilitatorDashboardDTO.PendingScore.builder()
-                            .enrollmentId(enrollment.getId())
-                            .participantId(enrollment.getParticipant().getId())
-                            .participantName(enrollment.getParticipant().getFirstName() + " " + 
-                                            enrollment.getParticipant().getLastName())
+                            .enrollmentId(participant.getId())
+                            .participantId(participant.getId())
+                            .participantName(participant.getUser().getFirstName() + " " + 
+                                            participant.getUser().getLastName())
                             .moduleId(module.getId())
                             .moduleName(module.getModuleName())
-                            .assessmentType("PENDING") // Indicates no score yet
+                            .assessmentType("PENDING")
                             .build());
                 }
             }
@@ -221,12 +180,9 @@ public class FacilitatorDashboardService {
         return pendingScores;
     }
 
-    /**
-     * Calculates average score across all enrollments.
-     */
-    private BigDecimal calculateAverageScore(List<Enrollment> enrollments) {
-        List<Score> allScores = enrollments.stream()
-                .flatMap(e -> e.getScores().stream())
+    private BigDecimal calculateAverageScore(List<MeParticipant> participants) {
+        List<Score> allScores = participants.stream()
+                .flatMap(p -> p.getScores().stream())
                 .toList();
         
         if (allScores.isEmpty()) {
@@ -240,9 +196,6 @@ public class FacilitatorDashboardService {
         return sum.divide(BigDecimal.valueOf(allScores.size()), 2, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Counts unread notifications for the facilitator.
-     */
     private Long countUnreadNotifications(User facilitator) {
         List<Notification> notifications = notificationRepository.findByRecipient(facilitator);
         return notifications.stream()
@@ -250,14 +203,11 @@ public class FacilitatorDashboardService {
                 .count();
     }
 
-    /**
-     * Gets recent notifications for the facilitator (last 10, ordered by creation date).
-     */
     private List<FacilitatorDashboardDTO.NotificationSummary> getRecentNotifications(User facilitator) {
         List<Notification> notifications = notificationRepository.findByRecipient(facilitator);
         
         return notifications.stream()
-                .sorted((n1, n2) -> n2.getCreatedAt().compareTo(n1.getCreatedAt())) // Most recent first
+                .sorted((n1, n2) -> n2.getCreatedAt().compareTo(n1.getCreatedAt()))
                 .limit(10)
                 .map(n -> FacilitatorDashboardDTO.NotificationSummary.builder()
                         .notificationId(n.getId())
@@ -271,27 +221,21 @@ public class FacilitatorDashboardService {
                 .toList();
     }
 
-    /**
-     * Counts completed modules.
-     * A module is considered completed if all active enrollments have scores for it.
-     */
-    private Long countCompletedModules(List<Enrollment> enrollments, List<TrainingModule> modules) {
+    private Long countCompletedModules(List<MeParticipant> participants, List<TrainingModule> modules) {
         long completedCount = 0;
         
         for (TrainingModule module : modules) {
-            // Count how many active enrollments have scores for this module
-            long enrollmentsWithScores = enrollments.stream()
-                    .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
-                    .filter(e -> e.getScores().stream()
+            long participantsWithScores = participants.stream()
+                    .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
+                    .filter(p -> p.getScores().stream()
                             .anyMatch(s -> s.getModule().getId().equals(module.getId())))
                     .count();
             
-            long activeEnrollments = enrollments.stream()
-                    .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+            long activeParticipants = participants.stream()
+                    .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
                     .count();
             
-            // Module is completed if all active enrollments have scores
-            if (activeEnrollments > 0 && enrollmentsWithScores == activeEnrollments) {
+            if (activeParticipants > 0 && participantsWithScores == activeParticipants) {
                 completedCount++;
             }
         }
@@ -299,71 +243,45 @@ public class FacilitatorDashboardService {
         return completedCount;
     }
 
-    /**
-     * Calculates the number of active participants in the cohort.
-     * Active participants are those with enrollment status ENROLLED or ACTIVE.
-     * 
-     * @param cohortId Cohort ID
-     * @return Number of active participants
-     */
     private Long calculateActiveParticipantsCount(UUID cohortId) {
-        // Count enrollments with status ENROLLED or ACTIVE
-        long enrolledCount = enrollmentRepository.countByCohortIdAndStatus(cohortId, EnrollmentStatus.ENROLLED);
-        long activeCount = enrollmentRepository.countByCohortIdAndStatus(cohortId, EnrollmentStatus.ACTIVE);
+        long enrolledCount = participantRepository.countByCohortIdAndStatus(cohortId, ParticipantStatus.ENROLLED);
+        long activeCount = participantRepository.countByCohortIdAndStatus(cohortId, ParticipantStatus.ACTIVE);
         return enrolledCount + activeCount;
     }
 
-    /**
-     * Calculates weekly attendance statistics with comparison to previous week.
-     * 
-     * @param cohortId Cohort ID
-     * @param cohort Cohort entity (for accessing program)
-     * @return Weekly attendance statistics
-     */
-    private FacilitatorDashboardDTO.WeeklyAttendanceStats calculateWeeklyAttendanceStats(UUID cohortId, Cohort cohort) {
+    private FacilitatorDashboardDTO.WeeklyAttendanceStats calculateWeeklyAttendanceStats(UUID cohortId, MeCohort cohort) {
         LocalDate today = LocalDate.now();
         
-        // Calculate this week's date range (Monday to Sunday)
         LocalDate thisWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate thisWeekEnd = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
         
-        // Calculate last week's date range
         LocalDate lastWeekStart = thisWeekStart.minusWeeks(1);
         LocalDate lastWeekEnd = thisWeekEnd.minusWeeks(1);
         
-        // Get all enrollments for the cohort to calculate expected attendance
-        List<Enrollment> enrollments = enrollmentRepository.findByCohortId(cohortId);
-        List<Enrollment> activeEnrollments = enrollments.stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED || e.getStatus() == EnrollmentStatus.ACTIVE)
+        List<MeParticipant> participants = participantRepository.findByCohortId(cohortId);
+        List<MeParticipant> activeParticipants = participants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED || p.getStatus() == ParticipantStatus.ACTIVE)
                 .toList();
         
-        // Get all training modules for the cohort's program
         List<TrainingModule> modules = cohort != null && cohort.getProgram() != null ? 
                 trainingModuleRepository.findByProgramId(cohort.getProgram().getId()) : new ArrayList<>();
         
-        // Count total attendance records (all statuses) for this week and last week
-        // This represents the actual recorded attendance sessions
         Long thisWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
                 cohortId, thisWeekStart, thisWeekEnd);
         Long lastWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
                 cohortId, lastWeekStart, lastWeekEnd);
         
-        // Count present attendance records for this week
         Long thisWeekPresentCount = attendanceRepository.countPresentByCohortIdAndSessionDateBetween(
                 cohortId, thisWeekStart, thisWeekEnd);
         
-        // Count present attendance records for last week
         Long lastWeekPresentCount = attendanceRepository.countPresentByCohortIdAndSessionDateBetween(
                 cohortId, lastWeekStart, lastWeekEnd);
         
-        // Use total recorded attendance as expected count (more realistic than calculated)
-        // If no attendance records exist, use a fallback calculation
         long thisWeekExpectedCount = thisWeekTotalCount > 0 ? thisWeekTotalCount : 
-                calculateFallbackExpectedCount(activeEnrollments.size(), modules.size(), thisWeekStart, thisWeekEnd);
+                calculateFallbackExpectedCount(activeParticipants.size(), modules.size(), thisWeekStart, thisWeekEnd);
         long lastWeekExpectedCount = lastWeekTotalCount > 0 ? lastWeekTotalCount :
-                calculateFallbackExpectedCount(activeEnrollments.size(), modules.size(), lastWeekStart, lastWeekEnd);
+                calculateFallbackExpectedCount(activeParticipants.size(), modules.size(), lastWeekStart, lastWeekEnd);
         
-        // Calculate attendance rates
         BigDecimal thisWeekRate = thisWeekExpectedCount > 0 ?
                 BigDecimal.valueOf(thisWeekPresentCount)
                         .divide(BigDecimal.valueOf(thisWeekExpectedCount), 4, RoundingMode.HALF_UP)
@@ -378,10 +296,8 @@ public class FacilitatorDashboardService {
                         .setScale(2, RoundingMode.HALF_UP) :
                 BigDecimal.ZERO;
         
-        // Calculate change from last week
         BigDecimal change = thisWeekRate.subtract(lastWeekRate);
         
-        // Format change display text
         String changeDisplayText;
         if (change.compareTo(BigDecimal.ZERO) > 0) {
             changeDisplayText = String.format("+%.1f%% from last week", change.doubleValue());
@@ -407,13 +323,6 @@ public class FacilitatorDashboardService {
                 .build();
     }
 
-    /**
-     * Counts working days (Monday to Friday) in a date range.
-     * 
-     * @param startDate Start date (inclusive)
-     * @param endDate End date (inclusive)
-     * @return Number of working days
-     */
     private long countWorkingDays(LocalDate startDate, LocalDate endDate) {
         long count = 0;
         LocalDate current = startDate;
@@ -427,62 +336,40 @@ public class FacilitatorDashboardService {
         return count;
     }
 
-    /**
-     * Calculates fallback expected attendance count when no attendance records exist.
-     * Uses a simple calculation: active enrollments * modules * working days.
-     * 
-     * @param activeEnrollmentsCount Number of active enrollments
-     * @param modulesCount Number of training modules
-     * @param startDate Week start date
-     * @param endDate Week end date
-     * @return Fallback expected count
-     */
-    private long calculateFallbackExpectedCount(long activeEnrollmentsCount, int modulesCount, 
+    private long calculateFallbackExpectedCount(long activeParticipantsCount, int modulesCount, 
                                                 LocalDate startDate, LocalDate endDate) {
         long workingDays = countWorkingDays(startDate, endDate);
-        return activeEnrollmentsCount * modulesCount * workingDays;
+        return activeParticipantsCount * modulesCount * workingDays;
     }
 
-    /**
-     * Calculates training module completion rate.
-     * A module is considered completed if all active enrollments have scores for it.
-     * 
-     * @param enrollments All enrollments in the cohort
-     * @param modules All training modules in the program
-     * @return Completion rate as percentage (0-100)
-     */
-    private BigDecimal calculateModuleCompletionRate(List<Enrollment> enrollments, List<TrainingModule> modules) {
+    private BigDecimal calculateModuleCompletionRate(List<MeParticipant> participants, List<TrainingModule> modules) {
         if (modules.isEmpty()) {
             return BigDecimal.ZERO;
         }
         
-        // Filter active enrollments
-        List<Enrollment> activeEnrollments = enrollments.stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED || e.getStatus() == EnrollmentStatus.ACTIVE)
+        List<MeParticipant> activeParticipants = participants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED || p.getStatus() == ParticipantStatus.ACTIVE)
                 .toList();
         
-        if (activeEnrollments.isEmpty()) {
+        if (activeParticipants.isEmpty()) {
             return BigDecimal.ZERO;
         }
         
-        // Count how many modules are completed (all active enrollments have scores)
         long completedModules = 0;
         for (TrainingModule module : modules) {
-            long enrollmentsWithScores = activeEnrollments.stream()
-                    .filter(e -> e.getScores().stream()
+            long participantsWithScores = activeParticipants.stream()
+                    .filter(p -> p.getScores().stream()
                             .anyMatch(s -> s.getModule().getId().equals(module.getId())))
                     .count();
             
-            if (enrollmentsWithScores == activeEnrollments.size()) {
+            if (participantsWithScores == activeParticipants.size()) {
                 completedModules++;
             }
         }
         
-        // Calculate completion rate
         return BigDecimal.valueOf(completedModules)
                 .divide(BigDecimal.valueOf(modules.size()), 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
     }
 }
-

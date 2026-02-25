@@ -15,4 +15,10 @@ public class RoleRequestDTO {
     
     @NotBlank(message = "Reason is required")
     private String reason;
+    
+    @NotBlank(message = "Organization is required")
+    private String organizationPartnerId;
+    
+    @NotNull(message = "Location is required")
+    private java.util.UUID locationCenterId;
 }

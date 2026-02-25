@@ -38,22 +38,15 @@ public class UploadScoreDTO {
         @NotNull(message = "Enrollment ID is required")
         private UUID enrollmentId;
 
-        @NotNull(message = "Module ID is required")
-        private UUID moduleId;
-
-        @NotNull(message = "Assessment type is required")
-        private AssessmentType assessmentType;
-
-        /**
-         * Name of the assessment (e.g., "Midterm Exam", "Project 1", "Quiz 3").
-         * Optional but recommended for better tracking.
-         */
-        private String assessmentName;
+        @NotNull(message = "Assignment ID is required")
+        private UUID assignmentId;
 
         @NotNull(message = "Score value is required")
         @DecimalMin(value = "0.0", message = "Score must be at least 0")
         @DecimalMax(value = "100.0", message = "Score must be at most 100")
         private BigDecimal scoreValue;
+
+        private String remarks;
     }
 }
 

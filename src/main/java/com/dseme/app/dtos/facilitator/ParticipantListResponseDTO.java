@@ -7,20 +7,16 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * DTO for paginated participant list response.
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParticipantListResponseDTO {
-    private List<ParticipantListDTO> participants;
-    private Long totalElements;
-    private Integer totalPages;
-    private Integer currentPage;
-    private Integer pageSize;
+    private List<ParticipantListItemDTO> participants;
+    private long totalElements;
+    private int totalPages;
+    private int currentPage;
+    private int pageSize;
     private boolean hasNext;
     private boolean hasPrevious;
 }
-

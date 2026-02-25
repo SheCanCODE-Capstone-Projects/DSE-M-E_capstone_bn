@@ -32,32 +32,32 @@ public class AccessRequestController {
     }
 
     @GetMapping("/access-requests")
-    @Operation(summary = "List all access requests (ADMIN only)")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "List all access requests (DONOR / ME_OFFICER only)")
+    @PreAuthorize("hasAnyRole('DONOR','ME_OFFICER')")
     public ResponseEntity<Page<AccessRequestResponseDTO>> getAllRequests(Pageable pageable) {
         Page<AccessRequestResponseDTO> requests = accessRequestService.getAllRequests(pageable);
         return ResponseEntity.ok(requests);
     }
 
     @GetMapping("/access-requests/pending")
-    @Operation(summary = "List pending access requests (ADMIN only)")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "List pending access requests (DONOR / ME_OFFICER only)")
+    @PreAuthorize("hasAnyRole('DONOR','ME_OFFICER')")
     public ResponseEntity<Page<AccessRequestResponseDTO>> getPendingRequests(Pageable pageable) {
         Page<AccessRequestResponseDTO> requests = accessRequestService.getPendingRequests(pageable);
         return ResponseEntity.ok(requests);
     }
 
     @PostMapping("/access-requests/{id}/approve")
-    @Operation(summary = "Approve access request (ADMIN only)")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Approve access request (DONOR / ME_OFFICER only)")
+    @PreAuthorize("hasAnyRole('DONOR','ME_OFFICER')")
     public ResponseEntity<AccessRequestResponseDTO> approveRequest(@PathVariable UUID id) {
         AccessRequestResponseDTO response = accessRequestService.approveRequest(id);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/access-requests/{id}/reject")
-    @Operation(summary = "Reject access request (ADMIN only)")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reject access request (DONOR / ME_OFFICER only)")
+    @PreAuthorize("hasAnyRole('DONOR','ME_OFFICER')")
     public ResponseEntity<AccessRequestResponseDTO> rejectRequest(@PathVariable UUID id) {
         AccessRequestResponseDTO response = accessRequestService.rejectRequest(id);
         return ResponseEntity.ok(response);

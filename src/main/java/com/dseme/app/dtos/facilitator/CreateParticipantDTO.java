@@ -48,5 +48,8 @@ public class CreateParticipantDTO {
 
     @NotNull(message = "Employment status baseline is required")
     private EmploymentStatusBaseline employmentStatusBaseline;
+
+    @NotNull(message = "Course selection is required")
+    private java.util.UUID cohortId; // Required: cohort (course) the participant will be enrolled in
 }
 

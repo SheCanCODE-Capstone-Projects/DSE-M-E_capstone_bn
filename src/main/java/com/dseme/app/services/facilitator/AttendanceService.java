@@ -4,14 +4,13 @@ import com.dseme.app.dtos.facilitator.FacilitatorContext;
 import com.dseme.app.dtos.facilitator.RecordAttendanceDTO;
 import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
-import com.dseme.app.exceptions.ResourceAlreadyExistsException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.Attendance;
-import com.dseme.app.models.Cohort;
-import com.dseme.app.models.Enrollment;
+import com.dseme.app.models.MeCohort;
+import com.dseme.app.models.MeParticipant;
 import com.dseme.app.models.TrainingModule;
 import com.dseme.app.repositories.AttendanceRepository;
-import com.dseme.app.repositories.EnrollmentRepository;
+import com.dseme.app.repositories.MeParticipantRepository;
 import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,10 +37,9 @@ import java.util.UUID;
 public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
-    private final EnrollmentRepository enrollmentRepository;
+    private final MeParticipantRepository participantRepository;
     private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
-    private final EnrollmentStatusService enrollmentStatusService;
 
     /**
      * Records attendance for one or more participants (batch support).
@@ -61,86 +59,60 @@ public class AttendanceService {
      * @throws AccessDeniedException if validation fails
      */
     public List<Attendance> recordAttendance(FacilitatorContext context, RecordAttendanceDTO dto) {
-        // Validate facilitator has active cohort
-        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+        MeCohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
 
-        // Validate cohort is active
         if (activeCohort.getStatus() != CohortStatus.ACTIVE) {
             throw new AccessDeniedException(
-                "Access denied. Cannot record attendance for a cohort with status: " + activeCohort.getStatus() +
-                ". Only ACTIVE cohorts allow attendance recording."
+                "Access denied. Cannot record attendance for a cohort with status: " + activeCohort.getStatus()
             );
         }
 
         List<Attendance> attendances = new ArrayList<>();
 
         for (RecordAttendanceDTO.AttendanceRecord record : dto.getRecords()) {
-            // Check for existing attendance (idempotency)
             Optional<Attendance> existingAttendance = attendanceRepository
-                    .findByEnrollmentIdAndModuleIdAndSessionDate(
+                    .findByParticipantIdAndSessionDate(
                             record.getEnrollmentId(),
-                            record.getModuleId(),
                             record.getSessionDate()
                     );
 
             if (existingAttendance.isPresent()) {
-                // Idempotency: return existing record instead of creating duplicate
                 attendances.add(existingAttendance.get());
                 continue;
             }
 
-            // Load enrollment
-            Enrollment enrollment = enrollmentRepository.findById(record.getEnrollmentId())
+            MeParticipant participant = participantRepository.findById(record.getEnrollmentId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "Enrollment not found with ID: " + record.getEnrollmentId()
+                        "Participant not found with ID: " + record.getEnrollmentId()
                     ));
 
-            // Validate enrollment belongs to facilitator's active cohort
-            if (!enrollment.getCohort().getId().equals(context.getCohortId())) {
+            if (!participant.getCohort().getId().equals(context.getCohortId())) {
                 throw new AccessDeniedException(
-                    "Access denied. Enrollment does not belong to your assigned active cohort."
+                    "Access denied. Participant does not belong to your assigned active cohort."
                 );
             }
 
-            // Validate enrollment's cohort belongs to facilitator's center
-            if (!enrollment.getCohort().getCenter().getId().equals(context.getCenterId())) {
-                throw new AccessDeniedException(
-                    "Access denied. Enrollment's cohort does not belong to your assigned center."
-                );
-            }
-
-            // Load module
             TrainingModule module = trainingModuleRepository.findById(record.getModuleId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                         "Training module not found with ID: " + record.getModuleId()
                     ));
 
-            // Validate module belongs to facilitator's active cohort's program
-            if (!module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
+            if (activeCohort.getProgram() != null && !module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
                 throw new AccessDeniedException(
                     "Access denied. Module does not belong to your active cohort's program."
                 );
             }
 
-            // Create attendance record
             Attendance attendance = Attendance.builder()
-                    .enrollment(enrollment)
+                    .participant(participant)
                     .module(module)
                     .sessionDate(record.getSessionDate())
                     .status(record.getStatus())
                     .remarks(record.getRemarks())
-                    .recordedBy(context.getFacilitator()) // Audit: who recorded the attendance
+                    .recordedBy(context.getFacilitator())
                     .build();
 
-            // Save attendance (unique constraint prevents duplicates at DB level)
-            Attendance savedAttendance = attendanceRepository.save(attendance);
-            attendances.add(savedAttendance);
-
-            // Update enrollment status: ENROLLED → ACTIVE on first attendance
-            // Only if status is PRESENT, LATE, or EXCUSED (not ABSENT)
-            if (record.getStatus() != com.dseme.app.enums.AttendanceStatus.ABSENT) {
-                enrollmentStatusService.activateEnrollmentOnFirstAttendance(enrollment.getId());
-            }
+            attendances.add(attendanceRepository.save(attendance));
         }
 
         return attendances;
@@ -160,7 +132,7 @@ public class AttendanceService {
      */
     public Attendance recordSingleAttendance(
             FacilitatorContext context,
-            UUID enrollmentId,
+            UUID participantId,
             UUID moduleId,
             java.time.LocalDate sessionDate,
             com.dseme.app.enums.AttendanceStatus status,
@@ -169,7 +141,7 @@ public class AttendanceService {
         RecordAttendanceDTO dto = RecordAttendanceDTO.builder()
                 .records(List.of(
                         RecordAttendanceDTO.AttendanceRecord.builder()
-                                .enrollmentId(enrollmentId)
+                                .enrollmentId(participantId)
                                 .moduleId(moduleId)
                                 .sessionDate(sessionDate)
                                 .status(status)
@@ -178,8 +150,7 @@ public class AttendanceService {
                 ))
                 .build();
 
-        List<Attendance> attendances = recordAttendance(context, dto);
-        return attendances.get(0);
+        return recordAttendance(context, dto).get(0);
     }
 }
 

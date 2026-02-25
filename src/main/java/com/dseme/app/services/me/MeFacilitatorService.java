@@ -24,6 +24,10 @@ public class MeFacilitatorService {
     private final UserRepository userRepository;
     private final CourseAssignmentRepository courseAssignmentRepository;
     private final CourseRepository courseRepository;
+    private final PartnerRepository partnerRepository;
+    private final CenterRepository centerRepository;
+    private final MeCohortBatchRepository cohortBatchRepository;
+    private final MeCohortRepository cohortRepository;
     private final PasswordEncoder passwordEncoder;
 
     public Page<FacilitatorResponseDTO> getAllFacilitators(Pageable pageable) {
@@ -43,12 +47,20 @@ public class MeFacilitatorService {
             throw new ResourceAlreadyExistsException("User with email already exists");
         }
 
+        Partner partner = partnerRepository.findById(dto.getPartnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        
+        Center center = centerRepository.findById(dto.getCenterId())
+                .orElseThrow(() -> new ResourceNotFoundException("Center not found"));
+
         User user = User.builder()
                 .email(dto.getEmail())
                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .firstName(dto.getFirstName())
                 .lastName(dto.getLastName())
                 .role(Role.FACILITATOR)
+                .partner(partner)
+                .center(center)
                 .isActive(true)
                 .isVerified(true)
                 .build();
@@ -72,9 +84,17 @@ public class MeFacilitatorService {
         Facilitator facilitator = facilitatorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
 
+        Partner partner = partnerRepository.findById(dto.getPartnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        
+        Center center = centerRepository.findById(dto.getCenterId())
+                .orElseThrow(() -> new ResourceNotFoundException("Center not found"));
+
         User user = facilitator.getUser();
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
+        user.setPartner(partner);
+        user.setCenter(center);
         
         facilitator.setEmployeeId(dto.getEmployeeId());
         facilitator.setDepartment(dto.getDepartment());
@@ -100,6 +120,121 @@ public class MeFacilitatorService {
                 .stream()
                 .map(assignment -> mapToCourseDTO(assignment.getCourse()))
                 .collect(Collectors.toList());
+    }
+
+    public List<PartnerDTO> getAllPartners() {
+        return partnerRepository.findAll()
+                .stream()
+                .filter(Partner::getIsActive)
+                .map(partner -> PartnerDTO.builder()
+                        .partnerId(partner.getPartnerId())
+                        .partnerName(partner.getPartnerName())
+                        .country(partner.getCountry())
+                        .region(partner.getRegion())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public List<CenterDTO> getAllCenters(String partnerId) {
+        List<Center> centers = partnerId != null 
+                ? centerRepository.findAll().stream()
+                        .filter(c -> c.getPartner().getPartnerId().equals(partnerId))
+                        .collect(Collectors.toList())
+                : centerRepository.findAll();
+        
+        return centers.stream()
+                .filter(Center::getIsActive)
+                .map(center -> CenterDTO.builder()
+                        .centerId(center.getId())
+                        .centerName(center.getCenterName())
+                        .location(center.getLocation())
+                        .partnerId(center.getPartner().getPartnerId())
+                        .partnerName(center.getPartner().getPartnerName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public FacilitatorResponseDTO assignOrganization(UUID facilitatorId, AssignOrganizationDTO dto) {
+        Facilitator facilitator = facilitatorRepository.findById(facilitatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
+
+        Partner partner = partnerRepository.findById(dto.getPartnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        
+        Center center = centerRepository.findById(dto.getCenterId())
+                .orElseThrow(() -> new ResourceNotFoundException("Center not found"));
+
+        User user = facilitator.getUser();
+        user.setPartner(partner);
+        user.setCenter(center);
+        userRepository.save(user);
+
+        return mapToResponseDTO(facilitator);
+    }
+
+    @Transactional
+    public void setCohortBatches(UUID facilitatorId, List<UUID> cohortBatchIds) {
+        Facilitator facilitator = facilitatorRepository.findById(facilitatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
+
+        List<MeCohortBatch> batches = cohortBatchRepository.findAllById(cohortBatchIds);
+        
+        if (batches.size() != cohortBatchIds.size()) {
+            throw new ResourceNotFoundException("One or more cohort batches not found");
+        }
+
+        facilitator.getCohortBatches().clear();
+        facilitator.getCohortBatches().addAll(batches);
+        facilitatorRepository.save(facilitator);
+        
+        // Auto-assign facilitator to courses in batch OR create if none exist
+        for (MeCohortBatch batch : batches) {
+            if (batch.getTracks().isEmpty()) {
+                // No courses in batch - create one
+                Course course = courseRepository.findAll().stream()
+                    .filter(c -> c.getStatus() == com.dseme.app.enums.CourseStatus.ACTIVE)
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("No active course found"));
+                
+                MeCohort cohort = MeCohort.builder()
+                    .name(batch.getName() + " - " + course.getName())
+                    .batch(batch)
+                    .course(course)
+                    .facilitator(facilitator)
+                    .startDate(batch.getStartDate())
+                    .endDate(batch.getEndDate())
+                    .maxParticipants(30)
+                    .status(com.dseme.app.enums.CohortStatus.UPCOMING)
+                    .build();
+                
+                cohortRepository.save(cohort);
+            } else {
+                // Courses exist - assign facilitator to unassigned ones
+                for (MeCohort cohort : batch.getTracks()) {
+                    if (cohort.getFacilitator() == null) {
+                        cohort.setFacilitator(facilitator);
+                        cohortRepository.save(cohort);
+                    }
+                }
+            }
+        }
+    }
+
+    @Transactional
+    public void setCohorts(UUID facilitatorId, List<UUID> cohortIds) {
+        Facilitator facilitator = facilitatorRepository.findById(facilitatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
+
+        List<MeCohort> cohorts = cohortRepository.findAllById(cohortIds);
+        
+        if (cohorts.size() != cohortIds.size()) {
+            throw new ResourceNotFoundException("One or more cohorts not found");
+        }
+
+        facilitator.getCohorts().clear();
+        facilitator.getCohorts().addAll(cohorts);
+        facilitatorRepository.save(facilitator);
     }
 
     @Transactional
@@ -143,16 +278,30 @@ public class MeFacilitatorService {
                 .map(assignment -> mapToCourseDTO(assignment.getCourse()))
                 .collect(Collectors.toList());
 
+        List<CohortBatchSummaryDTO> assignedBatches = facilitator.getCohortBatches()
+                .stream()
+                .map(batch -> CohortBatchSummaryDTO.builder()
+                        .id(batch.getId())
+                        .name(batch.getName())
+                        .build())
+                .collect(Collectors.toList());
+
+        User user = facilitator.getUser();
         return FacilitatorResponseDTO.builder()
                 .id(facilitator.getId())
-                .firstName(facilitator.getUser().getFirstName())
-                .lastName(facilitator.getUser().getLastName())
-                .email(facilitator.getUser().getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
                 .employeeId(facilitator.getEmployeeId())
                 .department(facilitator.getDepartment())
                 .specialization(facilitator.getSpecialization())
-                .status(facilitator.getUser().getIsActive() ? "ACTIVE" : "INACTIVE")
+                .status(user.getIsActive() ? "ACTIVE" : "INACTIVE")
+                .partnerId(user.getPartner() != null ? user.getPartner().getPartnerId() : null)
+                .partnerName(user.getPartner() != null ? user.getPartner().getPartnerName() : null)
+                .centerId(user.getCenter() != null ? user.getCenter().getId() : null)
+                .centerName(user.getCenter() != null ? user.getCenter().getCenterName() : null)
                 .assignedCourses(assignedCourses)
+                .assignedCohortBatches(assignedBatches)
                 .build();
     }
 

@@ -19,4 +19,7 @@ public class ParticipantResponseDTO {
     private LocalDate enrollmentDate;
     private String status;
     private BigDecimal score;
+    private String employmentStatus;
+    private BigDecimal annualIncome;
+    private String gender;
 }

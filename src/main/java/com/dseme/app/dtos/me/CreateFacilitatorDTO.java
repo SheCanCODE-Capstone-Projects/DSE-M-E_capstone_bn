@@ -3,6 +3,7 @@ package com.dseme.app.dtos.me;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -22,6 +23,12 @@ public class CreateFacilitatorDTO {
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
+    
+    @NotBlank(message = "Partner ID is required")
+    private String partnerId;
+    
+    @NotNull(message = "Center ID is required")
+    private UUID centerId;
     
     private String employeeId;
     private String department;

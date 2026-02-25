@@ -19,4 +19,6 @@ public class CourseResponseDTO {
     private Integer currentParticipants;
     private String status;
     private List<FacilitatorSummaryDTO> facilitators;
+    private Integer facilitatorsCount;
+    private Integer participantsCount;
 }

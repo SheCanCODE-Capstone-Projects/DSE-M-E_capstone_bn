@@ -33,6 +33,9 @@ public class EmailVerificationService {
     }
 
     public void generateAndSendVerificationToken(User user) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EmailVerificationService.class);
+        logger.info("Starting token generation for user: {}", user.getEmail());
+        
         // Check rate limiting
         if (isRateLimited(user.getEmail())) {
             throw new RuntimeException("Please wait " + RATE_LIMIT_MINUTES + " minutes before requesting another verification email");
@@ -41,6 +44,7 @@ public class EmailVerificationService {
         // Delete existing tokens
         tokenRepository.deleteByUser(user);
         tokenRepository.flush();
+        logger.info("Deleted existing tokens for user: {}", user.getEmail());
 
         // Generate new token
         String token = UUID.randomUUID().toString();
@@ -50,42 +54,60 @@ public class EmailVerificationService {
                 .expiryDate(Instant.now().plusSeconds(24 * 60 * 60)) // 24 hours
                 .build();
 
-        tokenRepository.save(verificationToken);
+        EmailVerificationToken savedToken = tokenRepository.save(verificationToken);
+        tokenRepository.flush();
+        logger.info("Saved verification token ID: {} for email: {} with token: {}", savedToken.getId(), user.getEmail(), token);
 
-        // Send email
-        emailService.sendVerificationEmail(user.getEmail(), token);
+        // Send email (with personalized greeting when firstName is set)
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), token, user.getFirstName());
+            logger.info("Verification email sent successfully to: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send verification email to {}: {}", user.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
+        }
         
         // Update rate limit
         rateLimitMap.put(user.getEmail(), Instant.now());
     }
 
     public String verifyEmail(String token) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EmailVerificationService.class);
+        logger.info("Attempting to verify token: {}", token);
+        
         Optional<EmailVerificationToken> tokenOpt = tokenRepository.findByToken(token);
         
         if (tokenOpt.isEmpty()) {
+            logger.warn("Token not found in database: {}", token);
+            logger.info("Total tokens in database: {}");
             return null; // Token not found
         }
 
         EmailVerificationToken verificationToken = tokenOpt.get();
         User user = verificationToken.getUser();
+        logger.info("Token found for user: {}", user.getEmail());
         
         // Check if already verified
         if (Boolean.TRUE.equals(user.getIsVerified())) {
+            logger.info("User already verified: {}", user.getEmail());
             return "already_verified";
         }
         
         // Check if token expired
         if (verificationToken.isExpired()) {
             tokenRepository.delete(verificationToken);
+            logger.warn("Token expired for user: {}", user.getEmail());
             return "expired";
         }
 
         // Mark user as verified
         user.setIsVerified(true);
         userRepository.save(user);
+        logger.info("User marked as verified: {}", user.getEmail());
 
         // Delete the token
         tokenRepository.delete(verificationToken);
+        logger.info("Token deleted for user: {}", user.getEmail());
         
         return "success";
     }

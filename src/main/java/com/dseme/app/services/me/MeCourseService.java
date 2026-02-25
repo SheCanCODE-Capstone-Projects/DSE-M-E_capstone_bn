@@ -23,8 +23,18 @@ public class MeCourseService {
     private final CourseRepository courseRepository;
     private final CourseAssignmentRepository courseAssignmentRepository;
     private final MeCohortRepository cohortRepository;
+    private final UserRepository userRepository;
 
     public Page<CourseResponseDTO> getAllCourses(Pageable pageable) {
+        User currentUser = getCurrentUser();
+        
+        // Filter courses by organization
+        if (currentUser.getPartner() != null) {
+            return courseRepository.findByPartner_PartnerId(currentUser.getPartner().getPartnerId(), pageable)
+                    .map(this::mapToResponseDTO);
+        }
+        
+        // Super admin sees all courses
         return courseRepository.findAll(pageable)
                 .map(this::mapToResponseDTO);
     }
@@ -37,8 +47,17 @@ public class MeCourseService {
 
     @Transactional
     public CourseResponseDTO createCourse(CreateCourseDTO dto) {
-        if (courseRepository.findByCode(dto.getCode()).isPresent()) {
-            throw new ResourceAlreadyExistsException("Course with code already exists");
+        User currentUser = getCurrentUser();
+        
+        // Check for duplicate code within the same organization
+        if (currentUser.getPartner() != null) {
+            if (courseRepository.findByCodeAndPartner_PartnerId(dto.getCode(), currentUser.getPartner().getPartnerId()).isPresent()) {
+                throw new ResourceAlreadyExistsException("Course with code already exists in your organization");
+            }
+        } else {
+            if (courseRepository.findByCode(dto.getCode()).isPresent()) {
+                throw new ResourceAlreadyExistsException("Course with code already exists");
+            }
         }
 
         Course course = Course.builder()
@@ -49,6 +68,7 @@ public class MeCourseService {
                 .durationWeeks(dto.getDurationWeeks() != null ? dto.getDurationWeeks() : 12)
                 .maxParticipants(dto.getMaxParticipants() != null ? dto.getMaxParticipants() : 30)
                 .status(CourseStatus.ACTIVE)
+                .partner(currentUser.getPartner())
                 .build();
 
         course = courseRepository.save(course);
@@ -59,6 +79,9 @@ public class MeCourseService {
     public CourseResponseDTO updateCourse(UUID id, CreateCourseDTO dto) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
+        
+        // Verify course belongs to user's organization
+        validateCourseAccess(course);
 
         course.setName(dto.getName());
         course.setDescription(dto.getDescription());
@@ -74,7 +97,27 @@ public class MeCourseService {
     public void deleteCourse(UUID id) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
+        
+        // Verify course belongs to user's organization
+        validateCourseAccess(course);
+        
         courseRepository.delete(course);
+    }
+
+    @Transactional
+    public CourseResponseDTO toggleCourseStatus(UUID id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
+        
+        // Verify course belongs to user's organization
+        validateCourseAccess(course);
+        
+        course.setStatus(course.getStatus() == CourseStatus.ACTIVE 
+                ? CourseStatus.INACTIVE 
+                : CourseStatus.ACTIVE);
+        
+        course = courseRepository.save(course);
+        return mapToResponseDTO(course);
     }
 
     public List<ParticipantResponseDTO> getCourseParticipants(UUID courseId) {
@@ -110,6 +153,8 @@ public class MeCourseService {
                 .currentParticipants(currentParticipants)
                 .status(course.getStatus().name())
                 .facilitators(facilitators)
+                .facilitatorsCount(facilitators.size())
+                .participantsCount(currentParticipants)
                 .build();
     }
 
@@ -141,5 +186,29 @@ public class MeCourseService {
                                 .build())
                         .build())
                 .build();
+    }
+    
+    private User getCurrentUser() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+    
+    private void validateCourseAccess(Course course) {
+        User currentUser = getCurrentUser();
+        
+        // Super admin can access all courses
+        if (currentUser.getPartner() == null) {
+            return;
+        }
+        
+        // Check if course belongs to user's organization
+        if (course.getPartner() == null || 
+            !course.getPartner().getPartnerId().equals(currentUser.getPartner().getPartnerId())) {
+            throw new com.dseme.app.exceptions.AccessDeniedException(
+                "You can only access courses from your organization");
+        }
     }
 }

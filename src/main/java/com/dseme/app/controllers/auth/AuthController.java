@@ -60,10 +60,16 @@ public class AuthController {
     @GetMapping("/verify")
     public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String token) {
         Map<String, Object> response = new HashMap<>();
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthController.class);
+        logger.info("API Call: GET /api/auth/verify with token: {}", token);
+        
         String result = verificationService.verifyEmail(token);
+        logger.info("Verification result: {}", result);
         
         if (result == null) {
+            logger.error("Token not found: {}", token);
             response.put("error", "Invalid verification token");
+            response.put("details", "The token was not found. Please ensure you used the correct verification link.");
             return ResponseEntity.badRequest().body(response);
         }
         
@@ -95,6 +101,31 @@ public class AuthController {
             return ResponseEntity.ok("Verification email sent");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // ================= DEBUG ENDPOINT =================
+    @GetMapping("/debug/user-status")
+    public ResponseEntity<Map<String, Object>> checkUserStatus(@RequestParam String email) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            var user = authService.getUserByEmail(email);
+            if (user == null) {
+                response.put("exists", false);
+                response.put("message", "User not found");
+            } else {
+                response.put("exists", true);
+                response.put("email", user.getEmail());
+                response.put("isVerified", user.getIsVerified());
+                response.put("isActive", user.getIsActive());
+                response.put("role", user.getRole());
+                response.put("hasPartner", user.getPartner() != null);
+                response.put("hasCenter", user.getCenter() != null);
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 

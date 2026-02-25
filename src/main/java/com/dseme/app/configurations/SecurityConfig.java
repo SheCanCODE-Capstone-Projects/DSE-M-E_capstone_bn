@@ -143,6 +143,7 @@ public class SecurityConfig {
                                 "/api/auth/verify",
                                 "/api/auth/resend-verification",
                                 "/api/auth/google",
+                                "/api/auth/debug/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
@@ -153,13 +154,15 @@ public class SecurityConfig {
                         ).permitAll()
                         // Role request endpoint - authorization handled in service layer
                         .requestMatchers("/api/users/request/role").authenticated()
-                        // ADMIN has full access
-                        .requestMatchers("/api/access-requests/**").hasRole("ADMIN")
-                        .requestMatchers("/api/facilitators/**").hasRole("ADMIN")
-                        .requestMatchers("/api/courses/**").hasAnyRole("ADMIN", "ME_OFFICER")
-                        .requestMatchers("/api/cohorts/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
-                        .requestMatchers("/api/participants/**").hasAnyRole("ADMIN", "ME_OFFICER", "FACILITATOR")
-                        .requestMatchers("/api/analytics/**").hasAnyRole("ADMIN", "ME_OFFICER", "DONOR")
+                        // Access requests: managed by DONOR and ME_OFFICER
+                        .requestMatchers("/api/access-requests/**").hasAnyRole("DONOR", "ME_OFFICER")
+                        // Facilitator management (ME portal)
+                        .requestMatchers("/api/facilitators/**").hasRole("ME_OFFICER")
+                        .requestMatchers("/api/me/**").hasRole("ME_OFFICER")
+                        .requestMatchers("/api/courses/**").hasRole("ME_OFFICER")
+                        .requestMatchers("/api/cohorts/**").hasAnyRole("ME_OFFICER", "FACILITATOR")
+                        .requestMatchers("/api/participants/**").hasAnyRole("ME_OFFICER", "FACILITATOR")
+                        .requestMatchers("/api/analytics/**").hasAnyRole("ME_OFFICER", "DONOR")
                         // Facilitator specific endpoints
                         .requestMatchers("/api/facilitator/**").hasRole("FACILITATOR")
                         .anyRequest().authenticated()
@@ -203,7 +206,7 @@ public class SecurityConfig {
         ));
         
         configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         
         configuration.setAllowedHeaders(Arrays.asList(

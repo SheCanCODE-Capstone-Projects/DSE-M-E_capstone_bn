@@ -1,15 +1,17 @@
 package com.dseme.app.services.facilitator;
 
 import com.dseme.app.dtos.facilitator.FacilitatorContext;
+import com.dseme.app.dtos.facilitator.GradeResponseDTO;
 import com.dseme.app.dtos.facilitator.UploadScoreDTO;
 import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
-import com.dseme.app.models.Cohort;
-import com.dseme.app.models.Enrollment;
+import com.dseme.app.models.MeCohort;
+import com.dseme.app.models.MeParticipant;
 import com.dseme.app.models.Score;
 import com.dseme.app.models.TrainingModule;
-import com.dseme.app.repositories.EnrollmentRepository;
+import com.dseme.app.repositories.AssignmentRepository;
+import com.dseme.app.repositories.MeParticipantRepository;
 import com.dseme.app.repositories.ScoreRepository;
 import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for uploading scores by facilitators.
@@ -37,8 +40,9 @@ import java.util.UUID;
 public class ScoreService {
 
     private final ScoreRepository scoreRepository;
-    private final EnrollmentRepository enrollmentRepository;
+    private final MeParticipantRepository participantRepository;
     private final TrainingModuleRepository trainingModuleRepository;
+    private final AssignmentRepository assignmentRepository;
     private final CohortIsolationService cohortIsolationService;
 
     /**
@@ -57,112 +61,142 @@ public class ScoreService {
      * @throws ResourceNotFoundException if enrollment or module not found
      * @throws AccessDeniedException if validation fails
      */
-    public List<Score> uploadScores(FacilitatorContext context, UploadScoreDTO dto) {
-        // Validate facilitator has active cohort
-        Cohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
+    public List<GradeResponseDTO> uploadScores(FacilitatorContext context, UploadScoreDTO dto) {
+        MeCohort activeCohort = cohortIsolationService.getFacilitatorActiveCohort(context);
 
-        // Validate cohort is active
         if (activeCohort.getStatus() != CohortStatus.ACTIVE) {
             throw new AccessDeniedException(
-                "Access denied. Cannot upload scores for a cohort with status: " + activeCohort.getStatus() +
-                ". Only ACTIVE cohorts allow score uploads."
+                "Access denied. Cannot upload scores for a cohort with status: " + activeCohort.getStatus()
             );
         }
 
         List<Score> scores = new ArrayList<>();
 
         for (UploadScoreDTO.ScoreRecord record : dto.getRecords()) {
-            // Load enrollment
-            Enrollment enrollment = enrollmentRepository.findById(record.getEnrollmentId())
+            MeParticipant participant = participantRepository.findById(record.getEnrollmentId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "Enrollment not found with ID: " + record.getEnrollmentId()
+                        "Participant not found with ID: " + record.getEnrollmentId()
                     ));
 
-            // Validate enrollment belongs to facilitator's active cohort
-            if (!enrollment.getCohort().getId().equals(context.getCohortId())) {
+            if (!participant.getCohort().getId().equals(context.getCohortId())) {
                 throw new AccessDeniedException(
-                    "Access denied. Enrollment does not belong to your assigned active cohort."
+                    "Access denied. Participant does not belong to your assigned active cohort."
                 );
             }
 
-            // Validate enrollment's cohort belongs to facilitator's center
-            if (!enrollment.getCohort().getCenter().getId().equals(context.getCenterId())) {
-                throw new AccessDeniedException(
-                    "Access denied. Enrollment's cohort does not belong to your assigned center."
-                );
-            }
-
-            // Load module
-            TrainingModule module = trainingModuleRepository.findById(record.getModuleId())
+            com.dseme.app.models.Assignment assignment = assignmentRepository.findById(record.getAssignmentId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "Training module not found with ID: " + record.getModuleId()
+                        "Assignment not found with ID: " + record.getAssignmentId()
                     ));
 
-            // Validate module belongs to facilitator's active cohort's program
-            if (!module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
+            if (!assignment.getCohort().getId().equals(context.getCohortId())) {
                 throw new AccessDeniedException(
-                    "Access denied. Module does not belong to your active cohort's program."
+                    "Access denied. Assignment does not belong to your cohort."
                 );
             }
 
-            // Validate score value is within range (0-100)
-            // This is also enforced by @DecimalMin/@DecimalMax in DTO and model
             if (record.getScoreValue().compareTo(java.math.BigDecimal.ZERO) < 0 ||
-                record.getScoreValue().compareTo(new java.math.BigDecimal("100.0")) > 0) {
+                record.getScoreValue().compareTo(new java.math.BigDecimal(assignment.getMaxScore().toString())) > 0) {
                 throw new AccessDeniedException(
-                    "Score value must be between 0 and 100. Provided value: " + record.getScoreValue()
+                    "Score value must be between 0 and " + assignment.getMaxScore() + ". Provided value: " + record.getScoreValue()
                 );
             }
 
-            // Create score record
             Score score = Score.builder()
-                    .enrollment(enrollment)
-                    .module(module)
-                    .assessmentType(record.getAssessmentType())
-                    .assessmentName(record.getAssessmentName())
+                    .participant(participant)
+                    .module(assignment.getModule())
+                    .assignment(assignment)
+                    .assessmentType(assignment.getType())
+                    .assessmentName(assignment.getTitle())
                     .scoreValue(record.getScoreValue())
-                    .recordedBy(context.getFacilitator()) // Audit: who recorded the score
-                    .recordedAt(Instant.now()) // When the score was recorded
+                    .recordedBy(context.getFacilitator())
+                    .recordedAt(Instant.now())
                     .build();
 
-            // Save score
             scores.add(scoreRepository.save(score));
         }
 
-        return scores;
+        return scores.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<GradeResponseDTO> getParticipantScoresDTO(UUID participantId, FacilitatorContext context) {
+        return getParticipantScores(participantId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<GradeResponseDTO> getModuleScoresDTO(UUID moduleId, FacilitatorContext context) {
+        return getModuleScores(moduleId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<GradeResponseDTO> getParticipantModuleScoresDTO(UUID participantId, UUID moduleId, FacilitatorContext context) {
+        return getParticipantModuleScores(participantId, moduleId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<GradeResponseDTO> getAssignmentScoresDTO(UUID assignmentId, FacilitatorContext context) {
+        com.dseme.app.models.Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        
+        return assignment.getScores().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private GradeResponseDTO mapToDTO(Score score) {
+        String participantName = score.getParticipant().getUser().getFirstName() + " " + 
+                                 score.getParticipant().getUser().getLastName();
+        String recordedByName = score.getRecordedBy().getFirstName() + " " + 
+                                score.getRecordedBy().getLastName();
+        
+        return GradeResponseDTO.builder()
+                .scoreId(score.getId())
+                .participantId(score.getParticipant().getId())
+                .participantName(participantName)
+                .moduleId(score.getModule().getId())
+                .moduleName(score.getModule().getModuleName())
+                .assessmentType(score.getAssessmentType())
+                .assessmentName(score.getAssessmentName())
+                .scoreValue(score.getScoreValue())
+                .recordedByName(recordedByName)
+                .recordedAt(score.getRecordedAt())
+                .build();
     }
 
     /**
-     * Uploads a single score record.
-     * Convenience method for single score upload.
+     * Get all scores for a specific participant.
      * 
-     * @param context Facilitator context
-     * @param enrollmentId Enrollment ID
-     * @param moduleId Module ID
-     * @param assessmentType Assessment type
-     * @param scoreValue Score value (0-100)
-     * @return Created Score entity
+     * @param participantId Participant ID
+     * @return List of scores for the participant
      */
-    public Score uploadSingleScore(
-            FacilitatorContext context,
-            UUID enrollmentId,
-            UUID moduleId,
-            com.dseme.app.enums.AssessmentType assessmentType,
-            java.math.BigDecimal scoreValue
-    ) {
-        UploadScoreDTO dto = UploadScoreDTO.builder()
-                .records(List.of(
-                        UploadScoreDTO.ScoreRecord.builder()
-                                .enrollmentId(enrollmentId)
-                                .moduleId(moduleId)
-                                .assessmentType(assessmentType)
-                                .scoreValue(scoreValue)
-                                .build()
-                ))
-                .build();
+    public List<Score> getParticipantScores(UUID participantId) {
+        return scoreRepository.findByParticipantId(participantId);
+    }
 
-        List<Score> scores = uploadScores(context, dto);
-        return scores.get(0);
+    /**
+     * Get all scores for a specific module.
+     * 
+     * @param moduleId Module ID
+     * @return List of scores for the module
+     */
+    public List<Score> getModuleScores(UUID moduleId) {
+        return scoreRepository.findByModuleId(moduleId);
+    }
+
+    /**
+     * Get scores for a specific participant in a specific module.
+     * 
+     * @param participantId Participant ID
+     * @param moduleId Module ID
+     * @return List of scores for the participant in the module
+     */
+    public List<Score> getParticipantModuleScores(UUID participantId, UUID moduleId) {
+        return scoreRepository.findByParticipantIdAndModuleId(participantId, moduleId);
     }
 }
 

@@ -11,11 +11,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/**
- * Context object that holds facilitator's authorization information.
- * This is loaded after JWT validation and contains all necessary IDs
- * for data access control.
- */
 @Data
 @Builder
 @NoArgsConstructor

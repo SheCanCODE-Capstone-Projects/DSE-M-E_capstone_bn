@@ -11,7 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LoginResponseDTO {
     private String token;
+    private String userId;
     private String role;
     private String redirectTo;
     private String message;
+    private String organizationName;
+    private String organizationId;
+    private String locationName;
+    private String locationId;
 }
