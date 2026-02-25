@@ -15,5 +15,11 @@ public interface CohortRepository extends JpaRepository<Cohort, UUID> {
      * Used to find facilitator's active cohort.
      */
     List<Cohort> findByCenterIdAndStatus(UUID centerId, CohortStatus status);
+
+    /**
+     * Find cohorts by status across all centers.
+     * Used for auto-provisioning when a facilitator has no center assigned (dev fallback).
+     */
+    List<Cohort> findByStatus(CohortStatus status);
 }
 

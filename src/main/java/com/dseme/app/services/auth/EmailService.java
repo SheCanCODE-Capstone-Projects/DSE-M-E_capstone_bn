@@ -87,15 +87,23 @@ public class EmailService {
     // ========================= YOUR EXISTING METHODS =========================
 
     public void sendPasswordResetCode(String to, String code) {
+        sendPasswordResetCode(to, code, null);
+    }
 
+    public void sendPasswordResetCode(String to, String code, String recipientFirstName) {
+        String greeting = (recipientFirstName != null && !recipientFirstName.isBlank())
+                ? "<p>Hello " + recipientFirstName + ",</p>"
+                : "";
         String htmlContent =
                 "<!DOCTYPE html>" +
                         "<html>" +
-                        "<body>" +
+                        "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
+                        greeting +
                         "<h2>Password Reset Code</h2>" +
                         "<p>Your 6-digit code is:</p>" +
                         "<h1 style='letter-spacing:5px;'>" + code + "</h1>" +
                         "<p><strong>This code expires in 2 minutes.</strong></p>" +
+                        "<p>— The DSE Team</p>" +
                         "</body>" +
                         "</html>";
 
@@ -103,32 +111,82 @@ public class EmailService {
     }
 
     public void sendVerificationEmail(String to, String token) {
+        sendVerificationEmail(to, token, null);
+    }
 
-        String verificationLink = frontendUrl + "/verify?token=" + java.net.URLEncoder.encode(token, java.nio.charset.StandardCharsets.UTF_8);
-
+    public void sendVerificationEmail(String to, String token, String recipientFirstName) {
+        String verificationLink = frontendUrl + "/email-verification?token=" + java.net.URLEncoder.encode(token, java.nio.charset.StandardCharsets.UTF_8);
+        String greeting = (recipientFirstName != null && !recipientFirstName.isBlank())
+                ? "<p>Hello " + recipientFirstName + ",</p>"
+                : "";
         String htmlContent =
-                "<h2>Welcome to DSE!</h2>" +
-                        "<p>Please verify your email:</p>" +
-                        "<a href='" + verificationLink + "'>Verify Email</a>" +
-                        "<p>This link expires in 24 hours.</p>";
+                "<!DOCTYPE html>" +
+                        "<html>" +
+                        "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
+                        "<h2>Welcome to DSE!</h2>" +
+                        greeting +
+                        "<p>Please verify your email address by clicking the link below:</p>" +
+                        "<p><a href='" + verificationLink + "' style='display: inline-block; padding: 10px 20px; background-color: #0B609D; color: white; text-decoration: none; border-radius: 8px;'>Verify Email</a></p>" +
+                        "<p>This link expires in 24 hours.</p>" +
+                        "<p>— The DSE Team</p>" +
+                        "</body>" +
+                        "</html>";
 
         sendEmail(to, "Verify Your DSE Email Address", htmlContent);
     }
 
     public void sendPasswordResetLink(String to, String resetToken) {
+        sendPasswordResetLink(to, resetToken, null);
+    }
 
+    public void sendPasswordResetLink(String to, String resetToken, String recipientFirstName) {
         String resetLink = frontendUrl + "/reset-password?token=" + java.net.URLEncoder.encode(resetToken, java.nio.charset.StandardCharsets.UTF_8);
-
+        String greeting = (recipientFirstName != null && !recipientFirstName.isBlank())
+                ? "<p>Hello " + recipientFirstName + ",</p>"
+                : "";
         String htmlContent =
-                "<h2>Password Reset</h2>" +
+                "<!DOCTYPE html>" +
+                        "<html>" +
+                        "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
+                        "<h2>Password Reset</h2>" +
+                        greeting +
                         "<p>Click below to reset your password:</p>" +
-                        "<a href='" + resetLink + "'>Reset Password</a>" +
-                        "<p>This link expires in 15 minutes.</p>";
+                        "<p><a href='" + resetLink + "' style='display: inline-block; padding: 10px 20px; background-color: #0B609D; color: white; text-decoration: none; border-radius: 8px;'>Reset Password</a></p>" +
+                        "<p>This link expires in 15 minutes.</p>" +
+                        "<p>— The DSE Team</p>" +
+                        "</body>" +
+                        "</html>";
 
         sendEmail(to, "Reset Your DSE Password", htmlContent);
     }
 
     public void sendHtmlEmail(String to, String subject, String htmlContent) {
         sendEmail(to, subject, htmlContent);
+    }
+
+    /**
+     * Sends a confirmation email when access is granted to a user.
+     * Informs them they can now log in and access their dashboard.
+     */
+    public void sendAccessGrantedEmail(String to, String requesterName, String grantedRole) {
+        String loginUrl = frontendUrl + "/login";
+        String roleDisplay = grantedRole.replace("_", " ");
+        String greeting = (requesterName != null && !requesterName.isBlank())
+                ? "<p>Hello " + requesterName.trim() + ",</p>"
+                : "<p>Hello,</p>";
+        String htmlContent =
+                "<!DOCTYPE html>" +
+                        "<html>" +
+                        "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
+                        "<h2>Access Granted – DSE Platform</h2>" +
+                        greeting +
+                        "<p>Your access request has been <strong>approved</strong>. You have been granted the role of <strong>" + roleDisplay + "</strong>.</p>" +
+                        "<p>You can now log in and access your dashboard:</p>" +
+                        "<p><a href='" + loginUrl + "' style='display: inline-block; padding: 10px 20px; background-color: #0B609D; color: white; text-decoration: none; border-radius: 8px;'>Log in to DSE</a></p>" +
+                        "<p>If you have any questions, please contact your administrator.</p>" +
+                        "<p>— The DSE Team</p>" +
+                        "</body>" +
+                        "</html>";
+        sendEmail(to, "DSE – Your Access Has Been Granted", htmlContent);
     }
 }

@@ -155,6 +155,13 @@ public class UserRoleService {
     //Updating the User record by adding role, partner and center information
     private User assignRoleToRequester(RoleRequest request) {
         User requester = request.getRequester();
+        
+        // ME Officers and Facilitators MUST have an organization (partner)
+        if ((request.getRequestedRole() == Role.ME_OFFICER || request.getRequestedRole() == Role.FACILITATOR) 
+            && request.getPartner() == null) {
+            throw new IllegalStateException("Cannot assign " + request.getRequestedRole() + " role without an organization. ME Officers and Facilitators must be associated with an organization.");
+        }
+        
         requester.setRole(request.getRequestedRole());
         requester.setPartner(request.getPartner());
         requester.setCenter(request.getCenter());

@@ -21,6 +21,10 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     
     Page<Course> findByStatus(CourseStatus status, Pageable pageable);
     
+    Page<Course> findByPartner_PartnerId(String partnerId, Pageable pageable);
+    
+    Optional<Course> findByCodeAndPartner_PartnerId(String code, String partnerId);
+    
     @Query("SELECT c FROM Course c WHERE c.name LIKE %:name% OR c.code LIKE %:name%")
     Page<Course> findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     

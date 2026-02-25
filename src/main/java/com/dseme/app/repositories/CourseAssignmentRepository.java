@@ -22,6 +22,8 @@ public interface CourseAssignmentRepository extends JpaRepository<CourseAssignme
     
     Optional<CourseAssignment> findByFacilitatorAndCourse(Facilitator facilitator, Course course);
     
+    boolean existsByFacilitatorIdAndCourseIdAndIsActive(UUID facilitatorId, UUID courseId, Boolean isActive);
+    
     @Query("SELECT ca FROM CourseAssignment ca WHERE ca.facilitator.id = :facilitatorId AND ca.isActive = true")
     List<CourseAssignment> findActiveByfacilitatorId(@Param("facilitatorId") UUID facilitatorId);
     

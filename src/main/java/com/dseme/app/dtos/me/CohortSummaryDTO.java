@@ -11,4 +11,5 @@ public class CohortSummaryDTO {
     private UUID id;
     private String name;
     private CourseSummaryDTO course;
+    private FacilitatorSummaryDTO facilitator;
 }

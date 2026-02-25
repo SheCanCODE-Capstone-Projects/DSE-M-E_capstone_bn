@@ -6,6 +6,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Builder
@@ -41,14 +43,52 @@ public class MeParticipant {
     @Column(name = "status", nullable = false)
     private ParticipantStatus status = ParticipantStatus.ENROLLED;
 
+    @Column(name = "completion_date")
+    private LocalDate completionDate;
+
+    @Column(name = "dropout_date")
+    private LocalDate dropoutDate;
+
+    @Column(name = "dropout_reason", columnDefinition = "TEXT")
+    private String dropoutReason;
+
+    @Builder.Default
+    @Column(name = "is_verified", nullable = false)
+    private Boolean isVerified = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "verified_by")
+    private User verifiedBy;
+
     @Column(name = "score", precision = 5, scale = 2)
     private BigDecimal score;
+
+    @Column(name = "employment_status", length = 50)
+    private String employmentStatus;
+
+    @Column(name = "annual_income")
+    private BigDecimal annualIncome;
+
+    @Column(name = "gender", length = 20)
+    private String gender;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "participant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Attendance> attendances = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "participant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Score> scores = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

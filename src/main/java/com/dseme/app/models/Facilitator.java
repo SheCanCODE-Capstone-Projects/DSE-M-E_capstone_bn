@@ -51,6 +51,16 @@ public class Facilitator {
     @OneToMany(mappedBy = "facilitator", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MeCohort> cohorts = new ArrayList<>();
 
+    /** Cohort batches (intakes) this facilitator is assigned to. */
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "facilitator_cohort_batch",
+            joinColumns = @JoinColumn(name = "facilitator_id"),
+            inverseJoinColumns = @JoinColumn(name = "batch_id")
+    )
+    private List<MeCohortBatch> cohortBatches = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();

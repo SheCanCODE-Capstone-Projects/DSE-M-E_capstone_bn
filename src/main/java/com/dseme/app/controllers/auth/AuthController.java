@@ -104,6 +104,31 @@ public class AuthController {
         }
     }
 
+    // ================= DEBUG ENDPOINT =================
+    @GetMapping("/debug/user-status")
+    public ResponseEntity<Map<String, Object>> checkUserStatus(@RequestParam String email) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            var user = authService.getUserByEmail(email);
+            if (user == null) {
+                response.put("exists", false);
+                response.put("message", "User not found");
+            } else {
+                response.put("exists", true);
+                response.put("email", user.getEmail());
+                response.put("isVerified", user.getIsVerified());
+                response.put("isActive", user.getIsActive());
+                response.put("role", user.getRole());
+                response.put("hasPartner", user.getPartner() != null);
+                response.put("hasCenter", user.getCenter() != null);
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     // ================= GOOGLE OAUTH2 =================
     /**
      * Endpoint to retrieve JWT token after Google OAuth2 authentication.

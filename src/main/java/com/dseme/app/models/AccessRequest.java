@@ -33,6 +33,12 @@ public class AccessRequest {
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
+    @Column(name = "organization_partner_id")
+    private String organizationPartnerId;
+
+    @Column(name = "location_center_id")
+    private UUID locationCenterId;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

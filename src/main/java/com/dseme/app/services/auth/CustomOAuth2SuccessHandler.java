@@ -38,6 +38,10 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        String frontendUrl = System.getenv("FRONTEND_URL");
+        if (frontendUrl == null || frontendUrl.isEmpty()) {
+            frontendUrl = "http://localhost:3000";
+        }
 
         User user = userRepo.findByEmail(oAuth2User.getEmail())
                 .orElse(null);
@@ -48,27 +52,27 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             // Send verification email
             emailVerificationService.generateAndSendVerificationToken(user);
             // Redirect with message to verify email (no JWT token yet)
-            response.sendRedirect("/api/auth/google?message=Registration successful. Please check your email to verify your account.");
+            response.sendRedirect(frontendUrl + "/oauth-callback?message=Registration successful. Please check your email to verify your account.");
             return;
         }
 
         // Existing user - check if email is verified
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
             // User not verified - redirect with message
-            response.sendRedirect("/api/auth/google?error=Please verify your email first. Check your inbox for the verification link.");
+            response.sendRedirect(frontendUrl + "/oauth-callback?error=Please verify your email first. Check your inbox for the verification link.");
             return;
         }
 
         // User is verified - check if account is active
         if (!Boolean.TRUE.equals(user.getIsActive())) {
-            response.sendRedirect("/api/auth/google?error=Your account is not active. Please contact support.");
+            response.sendRedirect(frontendUrl + "/oauth-callback?error=Your account is not active. Please contact support.");
             return;
         }
 
         // User is verified and active - generate JWT token
         String token = jwtUtil.generateToken(user.getEmail());
         String code = tokenStorage.storeToken(token);
-        response.sendRedirect("/api/auth/google?code=" + code);
+        response.sendRedirect(frontendUrl + "/oauth-callback?code=" + code);
     }
 
     /**

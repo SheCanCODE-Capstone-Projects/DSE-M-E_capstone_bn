@@ -15,4 +15,8 @@ public class LoginResponseDTO {
     private String role;
     private String redirectTo;
     private String message;
+    private String organizationName;
+    private String organizationId;
+    private String locationName;
+    private String locationId;
 }

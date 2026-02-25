@@ -24,6 +24,12 @@ public interface MeCohortRepository extends JpaRepository<MeCohort, UUID> {
     
     Page<MeCohort> findByStatus(CohortStatus status, Pageable pageable);
     
+    @Query("SELECT c FROM MeCohort c WHERE c.course.partner.partnerId = :partnerId")
+    Page<MeCohort> findByOrganization(@Param("partnerId") String partnerId, Pageable pageable);
+    
+    @Query("SELECT c FROM MeCohort c WHERE c.course.partner.partnerId = :partnerId")
+    List<MeCohort> findByOrganizationList(@Param("partnerId") String partnerId);
+    
     @Query("SELECT c FROM MeCohort c WHERE c.name LIKE %:name%")
     Page<MeCohort> findByNameContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     
@@ -32,4 +38,6 @@ public interface MeCohortRepository extends JpaRepository<MeCohort, UUID> {
     
     @Query("SELECT c FROM MeCohort c WHERE c.course.id = :courseId")
     List<MeCohort> findByCourseId(@Param("courseId") UUID courseId);
+    
+    List<MeCohort> findByFacilitatorId(UUID facilitatorId);
 }

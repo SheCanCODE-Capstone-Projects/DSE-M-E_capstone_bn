@@ -58,9 +58,9 @@ public class EmailVerificationService {
         tokenRepository.flush();
         logger.info("Saved verification token ID: {} for email: {} with token: {}", savedToken.getId(), user.getEmail(), token);
 
-        // Send email
+        // Send email (with personalized greeting when firstName is set)
         try {
-            emailService.sendVerificationEmail(user.getEmail(), token);
+            emailService.sendVerificationEmail(user.getEmail(), token, user.getFirstName());
             logger.info("Verification email sent successfully to: {}", user.getEmail());
         } catch (Exception e) {
             logger.error("Failed to send verification email to {}: {}", user.getEmail(), e.getMessage(), e);

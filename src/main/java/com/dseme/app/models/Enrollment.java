@@ -63,14 +63,6 @@ public class Enrollment {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Attendance> attendances = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Score> scores = new ArrayList<>();
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();

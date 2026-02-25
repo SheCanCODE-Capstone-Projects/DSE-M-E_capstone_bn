@@ -11,6 +11,7 @@ import java.util.UUID;
 public class CohortResponseDTO {
     private UUID id;
     private String name;
+    private CohortBatchSummaryDTO batch;
     private CourseSummaryDTO course;
     private FacilitatorSummaryDTO facilitator;
     private LocalDate startDate;

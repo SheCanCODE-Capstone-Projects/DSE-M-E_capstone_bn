@@ -17,5 +17,10 @@ public class FacilitatorResponseDTO {
     private String department;
     private String specialization;
     private String status;
+    private String partnerId;
+    private String partnerName;
+    private UUID centerId;
+    private String centerName;
     private List<AssignedCourseDTO> assignedCourses;
+    private List<CohortBatchSummaryDTO> assignedCohortBatches;
 }

@@ -29,11 +29,22 @@ public interface MeParticipantRepository extends JpaRepository<MeParticipant, UU
     @Query("SELECT p FROM MeParticipant p WHERE p.cohort.id = :cohortId")
     List<MeParticipant> findByCohortId(@Param("cohortId") UUID cohortId);
     
+    @Query("SELECT p FROM MeParticipant p WHERE p.cohort.id = :cohortId")
+    Page<MeParticipant> findByCohortId(@Param("cohortId") UUID cohortId, Pageable pageable);
+    
+    @Query("SELECT p FROM MeParticipant p WHERE p.cohort.batch.id = :batchId")
+    Page<MeParticipant> findByCohort_Batch_Id(@Param("batchId") UUID batchId, Pageable pageable);
+    
+    Page<MeParticipant> findByStatus(ParticipantStatus status, Pageable pageable);
+    
     @Query("SELECT p FROM MeParticipant p WHERE p.user.firstName LIKE %:name% OR p.user.lastName LIKE %:name% OR p.studentId LIKE %:name%")
     Page<MeParticipant> findByNameOrStudentId(@Param("name") String name, Pageable pageable);
     
     @Query("SELECT COUNT(p) FROM MeParticipant p WHERE p.status = :status")
     long countByStatus(@Param("status") ParticipantStatus status);
+    
+    @Query("SELECT COUNT(p) FROM MeParticipant p WHERE p.cohort.id = :cohortId AND p.status = :status")
+    long countByCohortIdAndStatus(@Param("cohortId") UUID cohortId, @Param("status") ParticipantStatus status);
     
     @Query("SELECT AVG(p.score) FROM MeParticipant p WHERE p.score IS NOT NULL")
     BigDecimal findAverageScore();

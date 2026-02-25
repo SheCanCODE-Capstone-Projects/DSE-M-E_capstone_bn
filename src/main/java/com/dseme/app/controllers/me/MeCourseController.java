@@ -52,6 +52,13 @@ public class MeCourseController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    @Operation(summary = "Toggle course active/inactive status")
+    public ResponseEntity<CourseResponseDTO> toggleCourseStatus(@PathVariable UUID id) {
+        CourseResponseDTO course = courseService.toggleCourseStatus(id);
+        return ResponseEntity.ok(course);
+    }
+
     @GetMapping("/{id}/participants")
     @Operation(summary = "Get course participants")
     public ResponseEntity<List<ParticipantResponseDTO>> getCourseParticipants(@PathVariable UUID id) {

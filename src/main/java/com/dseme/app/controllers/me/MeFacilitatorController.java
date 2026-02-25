@@ -59,6 +59,47 @@ public class MeFacilitatorController {
         return ResponseEntity.ok(courses);
     }
 
+    @GetMapping("/partners")
+    @Operation(summary = "Get all active partners")
+    public ResponseEntity<List<PartnerDTO>> getAllPartners() {
+        List<PartnerDTO> partners = facilitatorService.getAllPartners();
+        return ResponseEntity.ok(partners);
+    }
+
+    @GetMapping("/centers")
+    @Operation(summary = "Get all active centers")
+    public ResponseEntity<List<CenterDTO>> getAllCenters(@RequestParam(required = false) String partnerId) {
+        List<CenterDTO> centers = facilitatorService.getAllCenters(partnerId);
+        return ResponseEntity.ok(centers);
+    }
+
+    @PutMapping("/{id}/assign-organization")
+    @Operation(summary = "Assign partner and center to facilitator")
+    public ResponseEntity<FacilitatorResponseDTO> assignOrganization(
+            @PathVariable UUID id,
+            @Valid @RequestBody AssignOrganizationDTO dto) {
+        FacilitatorResponseDTO facilitator = facilitatorService.assignOrganization(id, dto);
+        return ResponseEntity.ok(facilitator);
+    }
+
+    @PutMapping("/{id}/cohort-batches")
+    @Operation(summary = "Assign cohort batches to facilitator")
+    public ResponseEntity<Void> setCohortBatches(
+            @PathVariable UUID id,
+            @Valid @RequestBody SetCohortBatchesDTO dto) {
+        facilitatorService.setCohortBatches(id, dto.getCohortBatchIds());
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/cohorts")
+    @Operation(summary = "Assign cohorts (tracks) to facilitator")
+    public ResponseEntity<Void> setCohorts(
+            @PathVariable UUID id,
+            @RequestBody List<UUID> cohortIds) {
+        facilitatorService.setCohorts(id, cohortIds);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{id}/assign-course")
     @Operation(summary = "Assign course to facilitator")
     public ResponseEntity<Void> assignCourse(

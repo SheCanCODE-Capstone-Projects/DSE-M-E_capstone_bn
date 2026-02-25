@@ -76,7 +76,7 @@ public class AuthService {
                 ? dto.getLastName().trim() : "Account");
         user.setRole(Role.UNASSIGNED);
         user.setIsActive(true);
-        user.setIsVerified(false);
+        user.setIsVerified(false); // Require email verification
         user.setProvider(Provider.LOCAL);
 
         User savedUser = userRepo.save(user);
@@ -106,6 +106,16 @@ public class AuthService {
             throw new AccountInactiveException("Account is inactive");
         }
 
+        // ME Officers MUST be associated with an organization
+        if (user.getRole() == Role.ME_OFFICER && user.getPartner() == null) {
+            throw new BadCredentialsException("ME Officer account must be associated with an organization. Please contact your administrator.");
+        }
+
+        // Facilitators MUST be associated with an organization
+        if (user.getRole() == Role.FACILITATOR && user.getPartner() == null) {
+            throw new BadCredentialsException("Facilitator account must be associated with an organization. Please contact your administrator.");
+        }
+
         if (!encoder.matches(dto.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid email or password");
         }
@@ -117,12 +127,23 @@ public class AuthService {
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
         String token = jwtUtil.generateToken(userDetails.getUsername());
         
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+        logger.info("Login - User: {}, Role: {}, Partner: {}, Center: {}",
+                user.getEmail(),
+                user.getRole(),
+                user.getPartner() != null ? user.getPartner().getPartnerName() : "NULL",
+                user.getCenter() != null ? user.getCenter().getCenterName() : "NULL");
+        
         return LoginResponseDTO.builder()
                 .token(token)
                 .userId(user.getId().toString())
                 .role(user.getRole().name())
                 .redirectTo(getRedirectUrl(user.getRole()))
                 .message(user.getRole() == Role.UNASSIGNED ? "Please request a role to access the system" : "Login successful")
+                .organizationName(user.getPartner() != null ? user.getPartner().getPartnerName() : null)
+                .organizationId(user.getPartner() != null ? user.getPartner().getPartnerId() : null)
+                .locationName(user.getCenter() != null ? user.getCenter().getCenterName() : null)
+                .locationId(user.getCenter() != null ? user.getCenter().getId().toString() : null)
                 .build();
     }
     
@@ -130,14 +151,12 @@ public class AuthService {
         switch (role) {
             case UNASSIGNED:
                 return "/request-access";
-            case ADMIN:
-                return "/admin/dashboard";
             case FACILITATOR:
-                return "/facilitator/dashboard";
+                return "/facilitator/overview";
             case ME_OFFICER:
-                return "/me/dashboard";
+                return "/ME/overviews";
             case DONOR:
-                return "/donor/dashboard";
+                return "/donor/overview";
             default:
                 return "/request-access";
         }
@@ -168,7 +187,7 @@ public class AuthService {
             
             try {
                 logger.info("Attempting to send password reset code to: {}", user.getEmail());
-                emailService.sendPasswordResetCode(user.getEmail(), token);
+                emailService.sendPasswordResetCode(user.getEmail(), token, user.getFirstName());
                 logger.info("Password reset code email sent successfully to: {}", user.getEmail());
             } catch (Exception e) {
                 logger.error("Failed to send password reset code email to {}: {}", user.getEmail(), e.getMessage(), e);
@@ -201,5 +220,10 @@ public class AuthService {
         forgotPasswordRepo.delete(fp);
 
         return "Password reset successful";
+    }
+
+    // ================= DEBUG HELPER =================
+    public User getUserByEmail(String email) {
+        return userRepo.findByEmail(email).orElse(null);
     }
 }
