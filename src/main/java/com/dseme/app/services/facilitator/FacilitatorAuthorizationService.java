@@ -51,8 +51,9 @@ public class FacilitatorAuthorizationService {
                 .orElse(null);
         
         if (facilitatorProfile != null) {
-            // Find active ME cohorts (tracks) assigned to this facilitator
-            List<MeCohort> activeMeCohorts = facilitatorProfile.getCohorts().stream()
+            // Find active ME cohorts (tracks) assigned to this facilitator through batches
+            List<MeCohort> activeMeCohorts = facilitatorProfile.getCohortBatches().stream()
+                    .flatMap(batch -> batch.getTracks().stream())
                     .filter(cohort -> cohort.getBatch() != null && cohort.getBatch().getStatus() == CohortStatus.ACTIVE)
                     .toList();
             
@@ -80,7 +81,7 @@ public class FacilitatorAuthorizationService {
         return Cohort.builder()
                 .id(meCohort.getId())
                 .cohortName(meCohort.getName())
-                .program(meCohort.getProgram())
+                .program(null) // Program is no longer directly linked to MeCohort
                 .center(center)
                 .startDate(meCohort.getStartDate())
                 .endDate(meCohort.getEndDate())
@@ -118,7 +119,9 @@ public class FacilitatorAuthorizationService {
             return false;
         }
         
-        return facilitatorProfile.getCohorts().stream()
+        // Check through cohort batches
+        return facilitatorProfile.getCohortBatches().stream()
+                .flatMap(batch -> batch.getTracks().stream())
                 .anyMatch(cohort -> cohort.getId().equals(cohortId));
     }
 }

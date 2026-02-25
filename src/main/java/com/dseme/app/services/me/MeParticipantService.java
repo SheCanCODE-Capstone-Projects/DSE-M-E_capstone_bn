@@ -190,12 +190,7 @@ public class MeParticipantService {
                                 .code(participant.getCohort().getCourse().getCode())
                                 .level(participant.getCohort().getCourse().getLevel().name())
                                 .build())
-                        .facilitator(participant.getCohort().getFacilitator() != null ?
-                                FacilitatorSummaryDTO.builder()
-                                        .id(participant.getCohort().getFacilitator().getId())
-                                        .firstName(participant.getCohort().getFacilitator().getUser().getFirstName())
-                                        .lastName(participant.getCohort().getFacilitator().getUser().getLastName())
-                                        .build() : null)
+                        .facilitator(null) // Facilitator is now in junction table, not directly on MeCohort
                         .build())
                 .build();
     }

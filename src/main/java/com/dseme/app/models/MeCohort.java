@@ -33,14 +33,6 @@ public class MeCohort {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "program_id")
-    private Program program;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "facilitator_id")
-    private Facilitator facilitator;
-
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 

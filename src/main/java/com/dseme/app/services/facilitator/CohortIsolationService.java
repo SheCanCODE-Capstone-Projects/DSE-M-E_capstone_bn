@@ -5,6 +5,7 @@ import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.models.MeCohort;
 import com.dseme.app.repositories.MeCohortRepository;
+import com.dseme.app.repositories.MeCohortFacilitatorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class CohortIsolationService {
 
     private final MeCohortRepository cohortRepository;
+    private final MeCohortFacilitatorRepository cohortFacilitatorRepository;
 
     public MeCohort validateActiveCohortAccess(FacilitatorContext context, UUID cohortId) {
         if (cohortId == null) {
@@ -40,7 +42,7 @@ public class CohortIsolationService {
             );
         }
 
-        if (cohort.getFacilitator() == null || !cohort.getFacilitator().getId().equals(context.getFacilitator().getId())) {
+        if (!cohortFacilitatorRepository.existsByCohortIdAndFacilitatorId(cohortId, context.getFacilitator().getId())) {
             throw new AccessDeniedException(
                 "Access denied. Cohort is not assigned to you."
             );
@@ -76,7 +78,7 @@ public class CohortIsolationService {
         MeCohort cohort = cohortRepository.findById(cohortId)
                 .orElseThrow(() -> new AccessDeniedException("Cohort not found"));
 
-        if (cohort.getFacilitator() == null || !cohort.getFacilitator().getId().equals(context.getFacilitator().getId())) {
+        if (!cohortFacilitatorRepository.existsByCohortIdAndFacilitatorId(cohortId, context.getFacilitator().getId())) {
             throw new AccessDeniedException(
                 "Access denied. Cohort is not assigned to you."
             );
@@ -90,24 +92,22 @@ public class CohortIsolationService {
     }
 
     public List<MeCohort> getActiveCohortsForFacilitator(FacilitatorContext context) {
+        List<UUID> cohortIds = cohortFacilitatorRepository.findCohortIdsByFacilitatorId(context.getFacilitator().getId());
         return cohortRepository.findByStatus(CohortStatus.ACTIVE).stream()
-                .filter(c -> c.getFacilitator() != null && c.getFacilitator().getId().equals(context.getFacilitator().getId()))
+                .filter(c -> cohortIds.contains(c.getId()))
                 .toList();
     }
 
     public MeCohort getFacilitatorActiveCohort(FacilitatorContext context) {
-        // Get cohort ID from context (set by FacilitatorAuthorizationService)
         UUID cohortId = context.getCohortId();
         
         if (cohortId == null) {
             throw new AccessDeniedException("No active cohort assigned. Contact ME Officer.");
         }
         
-        // Find the cohort
         MeCohort cohort = cohortRepository.findById(cohortId)
                 .orElseThrow(() -> new AccessDeniedException("Cohort not found"));
         
-        // Verify it's active
         if (cohort.getBatch() == null || cohort.getBatch().getStatus() != CohortStatus.ACTIVE) {
             throw new AccessDeniedException("Cohort batch is not active");
         }

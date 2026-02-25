@@ -22,6 +22,7 @@ public class ParticipantManagementService {
     private final UserRepository userRepository;
     private final CohortIsolationService cohortIsolationService;
     private final FacilitatorRepository facilitatorRepository;
+    private final MeCohortFacilitatorRepository cohortFacilitatorRepository;
 
     @Transactional(readOnly = true)
     public List<ParticipantDTO> getParticipantsByCohort(FacilitatorContext context) {
@@ -36,14 +37,12 @@ public class ParticipantManagementService {
 
     @Transactional(readOnly = true)
     public List<ParticipantListItemDTO> getParticipantsListByCohort(FacilitatorContext context) {
-        // Get facilitator from repository
         Facilitator facilitator = facilitatorRepository.findByUserId(context.getFacilitator().getId())
                 .orElseThrow(() -> new RuntimeException("Facilitator not found"));
         
-        // Get ALL cohorts for this facilitator
-        List<MeCohort> cohorts = cohortRepository.findByFacilitatorId(facilitator.getId());
+        List<UUID> cohortIds = cohortFacilitatorRepository.findCohortIdsByFacilitatorId(facilitator.getId());
+        List<MeCohort> cohorts = cohortRepository.findAllById(cohortIds);
         
-        // Get participants from ALL cohorts
         List<MeParticipant> allParticipants = new java.util.ArrayList<>();
         for (MeCohort cohort : cohorts) {
             allParticipants.addAll(participantRepository.findByCohortId(cohort.getId()));
@@ -56,15 +55,13 @@ public class ParticipantManagementService {
 
     @Transactional(readOnly = true)
     public List<ParticipantDTO> getParticipantsByCohortId(FacilitatorContext context, UUID cohortId) {
-        // Verify facilitator has access to this cohort
         MeCohort cohort = cohortRepository.findById(cohortId)
                 .orElseThrow(() -> new RuntimeException("Cohort not found"));
         
-        // Get facilitator from repository
         Facilitator facilitator = facilitatorRepository.findByUserId(context.getFacilitator().getId())
                 .orElseThrow(() -> new RuntimeException("Facilitator not found"));
         
-        if (cohort.getFacilitator() == null || !cohort.getFacilitator().getId().equals(facilitator.getId())) {
+        if (!cohortFacilitatorRepository.existsByCohortIdAndFacilitatorId(cohortId, facilitator.getId())) {
             throw new RuntimeException("You don't have access to this cohort");
         }
         
@@ -77,15 +74,13 @@ public class ParticipantManagementService {
 
     @Transactional(readOnly = true)
     public List<ParticipantListItemDTO> getParticipantsListByCohortId(FacilitatorContext context, UUID cohortId) {
-        // Verify facilitator has access to this cohort
         MeCohort cohort = cohortRepository.findById(cohortId)
                 .orElseThrow(() -> new RuntimeException("Cohort not found"));
         
-        // Get facilitator from repository
         Facilitator facilitator = facilitatorRepository.findByUserId(context.getFacilitator().getId())
                 .orElseThrow(() -> new RuntimeException("Facilitator not found"));
         
-        if (cohort.getFacilitator() == null || !cohort.getFacilitator().getId().equals(facilitator.getId())) {
+        if (!cohortFacilitatorRepository.existsByCohortIdAndFacilitatorId(cohortId, facilitator.getId())) {
             throw new RuntimeException("You don't have access to this cohort");
         }
         
@@ -98,20 +93,17 @@ public class ParticipantManagementService {
 
     @Transactional(readOnly = true)
     public ParticipantStatisticsDTO getStatistics(FacilitatorContext context) {
-        // Get facilitator from repository
         Facilitator facilitator = facilitatorRepository.findByUserId(context.getFacilitator().getId())
                 .orElseThrow(() -> new RuntimeException("Facilitator not found"));
         
-        // Get ALL cohorts for this facilitator
-        List<MeCohort> cohorts = cohortRepository.findByFacilitatorId(facilitator.getId());
+        List<UUID> cohortIds = cohortFacilitatorRepository.findCohortIdsByFacilitatorId(facilitator.getId());
+        List<MeCohort> cohorts = cohortRepository.findAllById(cohortIds);
         
-        // Get participants from ALL cohorts
         List<MeParticipant> allParticipants = new java.util.ArrayList<>();
         for (MeCohort cohort : cohorts) {
             allParticipants.addAll(participantRepository.findByCohortId(cohort.getId()));
         }
         
-        // Calculate gender distribution
         java.util.Map<String, Long> genderCounts = allParticipants.stream()
                 .filter(p -> p.getGender() != null)
                 .collect(java.util.stream.Collectors.groupingBy(

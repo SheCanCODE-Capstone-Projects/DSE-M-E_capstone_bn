@@ -35,8 +35,8 @@ public class FacilitatorDashboardService {
             
             List<MeParticipant> participants = participantRepository.findByCohortId(context.getCohortId());
             
-            List<TrainingModule> modules = activeCohort.getProgram() != null ? 
-                    trainingModuleRepository.findByProgramId(activeCohort.getProgram().getId()) : new ArrayList<>();
+            // Get modules through course - since MeCohort no longer has direct program link
+            List<TrainingModule> modules = new ArrayList<>();
             
             Long activeParticipantsCount = calculateActiveParticipantsCount(context.getCohortId());
             
@@ -47,7 +47,7 @@ public class FacilitatorDashboardService {
                     .cohortId(activeCohort.getId())
                     .cohortName(activeCohort.getName())
                     .cohortStartDate(activeCohort.getStartDate())
-                    .programName(activeCohort.getProgram() != null ? activeCohort.getProgram().getProgramName() : "N/A")
+                    .programName("N/A") // Program no longer directly linked to MeCohort
                     .enrollmentCount((long) participants.size())
                     .activeEnrollments(countParticipantsByStatus(participants, ParticipantStatus.ACTIVE))
                     .completedEnrollments(countParticipantsByStatus(participants, ParticipantStatus.COMPLETED))
@@ -263,8 +263,7 @@ public class FacilitatorDashboardService {
                 .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED || p.getStatus() == ParticipantStatus.ACTIVE)
                 .toList();
         
-        List<TrainingModule> modules = cohort != null && cohort.getProgram() != null ? 
-                trainingModuleRepository.findByProgramId(cohort.getProgram().getId()) : new ArrayList<>();
+        List<TrainingModule> modules = new ArrayList<>();
         
         Long thisWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
                 cohortId, thisWeekStart, thisWeekEnd);

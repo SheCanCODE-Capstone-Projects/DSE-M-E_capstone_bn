@@ -97,11 +97,7 @@ public class AttendanceService {
                         "Training module not found with ID: " + record.getModuleId()
                     ));
 
-            if (activeCohort.getProgram() != null && !module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
-                throw new AccessDeniedException(
-                    "Access denied. Module does not belong to your active cohort's program."
-                );
-            }
+            // Module validation removed since MeCohort no longer has direct program link
 
             Attendance attendance = Attendance.builder()
                     .participant(participant)

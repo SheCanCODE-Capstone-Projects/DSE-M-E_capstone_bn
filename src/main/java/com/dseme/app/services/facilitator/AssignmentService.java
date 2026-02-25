@@ -40,9 +40,7 @@ public class AssignmentService {
         TrainingModule module = trainingModuleRepository.findById(dto.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Module not found"));
 
-        if (activeCohort.getProgram() != null && !module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
-            throw new AccessDeniedException("Module does not belong to your cohort's program");
-        }
+        // Module validation removed since MeCohort no longer has direct program link
 
         Assignment assignment = Assignment.builder()
                 .title(dto.getTitle())

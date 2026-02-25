@@ -51,13 +51,15 @@ public class AttendanceMarkingService {
                 
                 facilitatorCohorts = List.of(cohort);
             } else {
-                // Get facilitator profile and their cohorts
+                // Get facilitator profile and their cohorts through batches
                 com.dseme.app.models.Facilitator facilitatorProfile = facilitatorRepository
                         .findByUserId(context.getFacilitator().getId())
                         .orElse(null);
                 
                 if (facilitatorProfile != null) {
-                    facilitatorCohorts = facilitatorProfile.getCohorts();
+                    facilitatorCohorts = facilitatorProfile.getCohortBatches().stream()
+                            .flatMap(batch -> batch.getTracks().stream())
+                            .collect(Collectors.toList());
                 } else {
                     facilitatorCohorts = List.of();
                 }

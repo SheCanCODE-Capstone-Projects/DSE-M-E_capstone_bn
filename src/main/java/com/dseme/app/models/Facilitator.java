@@ -47,10 +47,6 @@ public class Facilitator {
     @OneToMany(mappedBy = "facilitator", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CourseAssignment> courseAssignments = new ArrayList<>();
 
-    @Builder.Default
-    @OneToMany(mappedBy = "facilitator", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MeCohort> cohorts = new ArrayList<>();
-
     /** Cohort batches (intakes) this facilitator is assigned to. */
     @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
