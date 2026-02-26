@@ -81,7 +81,6 @@ public class FacilitatorAuthorizationService {
         return Cohort.builder()
                 .id(meCohort.getId())
                 .cohortName(meCohort.getName())
-                .program(null) // Program is no longer directly linked to MeCohort
                 .center(center)
                 .startDate(meCohort.getStartDate())
                 .endDate(meCohort.getEndDate())

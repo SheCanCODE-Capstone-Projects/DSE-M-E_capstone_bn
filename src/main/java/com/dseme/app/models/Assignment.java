@@ -32,9 +32,9 @@ public class Assignment {
     @Column(name = "type", nullable = false, length = 20)
     private AssessmentType type;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "module_id", nullable = false)
-    private TrainingModule module;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cohort_id", nullable = false)

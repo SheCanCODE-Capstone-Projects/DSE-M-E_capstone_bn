@@ -10,6 +10,6 @@ import java.util.UUID;
 @Repository
 public interface AssignmentRepository extends JpaRepository<Assignment, UUID> {
     List<Assignment> findByCohortId(UUID cohortId);
-    List<Assignment> findByModuleId(UUID moduleId);
-    List<Assignment> findByCohortIdAndModuleId(UUID cohortId, UUID moduleId);
+    List<Assignment> findByCourseId(UUID courseId);
+    List<Assignment> findByCohortIdAndCourseId(UUID cohortId, UUID courseId);
 }

@@ -7,11 +7,11 @@ import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.Assignment;
+import com.dseme.app.models.Course;
 import com.dseme.app.models.MeCohort;
-import com.dseme.app.models.TrainingModule;
 import com.dseme.app.repositories.AssignmentRepository;
+import com.dseme.app.repositories.CourseRepository;
 import com.dseme.app.repositories.ScoreRepository;
-import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
-    private final TrainingModuleRepository trainingModuleRepository;
+    private final CourseRepository courseRepository;
     private final ScoreRepository scoreRepository;
     private final CohortIsolationService cohortIsolationService;
 
@@ -37,16 +37,16 @@ public class AssignmentService {
             throw new AccessDeniedException("Cannot create assignment for non-active cohort");
         }
 
-        TrainingModule module = trainingModuleRepository.findById(dto.getModuleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Module not found"));
-
-        // Module validation removed since MeCohort no longer has direct program link
+        Course course = activeCohort.getCourse();
+        if (course == null) {
+            throw new ResourceNotFoundException("Cohort has no course assigned");
+        }
 
         Assignment assignment = Assignment.builder()
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .type(dto.getType())
-                .module(module)
+                .course(course)
                 .cohort(activeCohort)
                 .dueDate(dto.getDueDate())
                 .maxScore(dto.getMaxScore())
@@ -86,13 +86,15 @@ public class AssignmentService {
             throw new AccessDeniedException("Assignment does not belong to your cohort");
         }
 
-        TrainingModule module = trainingModuleRepository.findById(dto.getModuleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Module not found"));
+        Course course = activeCohort.getCourse();
+        if (course == null) {
+            throw new ResourceNotFoundException("Cohort has no course assigned");
+        }
 
         assignment.setTitle(dto.getTitle());
         assignment.setDescription(dto.getDescription());
         assignment.setType(dto.getType());
-        assignment.setModule(module);
+        assignment.setCourse(course);
         assignment.setDueDate(dto.getDueDate());
         assignment.setMaxScore(dto.getMaxScore());
 
@@ -114,17 +116,18 @@ public class AssignmentService {
 
     private AssignmentResponseDTO mapToDTO(Assignment assignment, MeCohort cohort) {
         int totalStudents = cohort.getParticipants().size();
-        int gradedStudents = scoreRepository.findByModuleId(assignment.getModule().getId()).size();
+        int gradedStudents = assignment.getCourse() != null ? 
+            scoreRepository.findByCourseId(assignment.getCourse().getId()).size() : 0;
 
         return AssignmentResponseDTO.builder()
                 .id(assignment.getId())
                 .title(assignment.getTitle())
                 .description(assignment.getDescription())
                 .type(assignment.getType())
-                .moduleId(assignment.getModule().getId())
-                .moduleName(assignment.getModule().getModuleName())
-                .course(assignment.getModule().getProgram() != null ? assignment.getModule().getProgram().getProgramName() : "N/A")
-                .chapter(assignment.getModule().getModuleName())
+                .moduleId(assignment.getCourse() != null ? assignment.getCourse().getId() : null)
+                .moduleName(assignment.getCourse() != null ? assignment.getCourse().getName() : "N/A")
+                .course(assignment.getCourse() != null ? assignment.getCourse().getName() : "N/A")
+                .chapter(assignment.getTitle())
                 .dueDate(assignment.getDueDate())
                 .maxScore(assignment.getMaxScore())
                 .totalStudents(totalStudents)

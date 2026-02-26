@@ -31,8 +31,22 @@ public class MeFacilitatorService {
     private final PasswordEncoder passwordEncoder;
 
     public Page<FacilitatorResponseDTO> getAllFacilitators(Pageable pageable) {
-        return facilitatorRepository.findAll(pageable)
-                .map(this::mapToResponseDTO);
+        User currentUser = getCurrentUser();
+        Page<Facilitator> facilitators = facilitatorRepository.findAll(pageable);
+        
+        // If user has no partner, show all facilitators (admin/donor view)
+        if (currentUser.getPartner() == null) {
+            return facilitators.map(this::mapToResponseDTO);
+        }
+        
+        // Filter by organization
+        List<FacilitatorResponseDTO> filtered = facilitators.getContent().stream()
+                .filter(f -> f.getUser().getPartner() != null && 
+                            f.getUser().getPartner().getPartnerId().equals(currentUser.getPartner().getPartnerId()))
+                .map(this::mapToResponseDTO)
+                .collect(java.util.stream.Collectors.toList());
+        
+        return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
     }
 
     public FacilitatorResponseDTO getFacilitatorById(UUID id) {
@@ -296,5 +310,13 @@ public class MeFacilitatorService {
                 .code(course.getCode())
                 .level(course.getLevel().name())
                 .build();
+    }
+
+    private User getCurrentUser() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

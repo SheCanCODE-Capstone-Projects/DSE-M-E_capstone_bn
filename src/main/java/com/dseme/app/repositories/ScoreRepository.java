@@ -12,9 +12,9 @@ import java.util.UUID;
 public interface ScoreRepository extends JpaRepository<Score, UUID> {
     List<Score> findByParticipantId(UUID participantId);
     
-    List<Score> findByModuleId(UUID moduleId);
+    List<Score> findByCourseId(UUID courseId);
     
-    List<Score> findByParticipantIdAndModuleId(UUID participantId, UUID moduleId);
+    List<Score> findByParticipantIdAndCourseId(UUID participantId, UUID courseId);
     
     List<Score> findByAssignmentId(UUID assignmentId);
     

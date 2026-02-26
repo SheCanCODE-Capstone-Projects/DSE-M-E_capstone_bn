@@ -26,7 +26,6 @@ public class FacilitatorDashboardService {
     private final MeParticipantRepository participantRepository;
     private final AttendanceRepository attendanceRepository;
     private final NotificationRepository notificationRepository;
-    private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
 
     public FacilitatorDashboardDTO getDashboardData(FacilitatorContext context) {
@@ -35,8 +34,7 @@ public class FacilitatorDashboardService {
             
             List<MeParticipant> participants = participantRepository.findByCohortId(context.getCohortId());
             
-            // Get modules through course - since MeCohort no longer has direct program link
-            List<TrainingModule> modules = new ArrayList<>();
+            // Modules removed - using course-based tracking now
             
             Long activeParticipantsCount = calculateActiveParticipantsCount(context.getCohortId());
             
@@ -54,19 +52,19 @@ public class FacilitatorDashboardService {
                     .droppedOutEnrollments(countParticipantsByStatus(participants, ParticipantStatus.DROPPED_OUT))
                     .activeParticipantsCount(activeParticipantsCount)
                     .totalParticipants((long) participants.size())
-                    .totalModules((long) modules.size())
+                    .totalModules(0L)
                     .weeklyAttendance(weeklyAttendance)
-                    .attendancePercentage(calculateAttendancePercentage(participants, modules))
+                    .attendancePercentage(calculateAttendancePercentage(participants))
                     .totalAttendanceRecords(countTotalAttendanceRecords(participants))
-                    .expectedAttendanceRecords(calculateExpectedAttendanceRecords(participants, modules))
-                    .missingAttendanceAlerts(findMissingAttendanceAlerts(participants, modules))
-                    .pendingScoresCount((long) findPendingScores(participants, modules).size())
-                    .pendingScores(findPendingScores(participants, modules))
+                    .expectedAttendanceRecords((long) participants.size())
+                    .missingAttendanceAlerts(new ArrayList<>())
+                    .pendingScoresCount(0L)
+                    .pendingScores(new ArrayList<>())
                     .averageScore(calculateAverageScore(participants))
-                    .moduleCompletionRate(calculateModuleCompletionRate(participants, modules))
+                    .moduleCompletionRate(BigDecimal.ZERO)
                     .unreadNotificationsCount(countUnreadNotifications(context.getFacilitator()))
                     .recentNotifications(getRecentNotifications(context.getFacilitator()))
-                    .completedModules(countCompletedModules(participants, modules))
+                    .completedModules(0L)
                     .build();
         } catch (Exception e) {
             e.printStackTrace();
@@ -89,9 +87,9 @@ public class FacilitatorDashboardService {
                 .count();
     }
 
-    private BigDecimal calculateAttendancePercentage(List<MeParticipant> participants, List<TrainingModule> modules) {
+    private BigDecimal calculateAttendancePercentage(List<MeParticipant> participants) {
         long totalRecords = countTotalAttendanceRecords(participants);
-        long expectedRecords = calculateExpectedAttendanceRecords(participants, modules);
+        long expectedRecords = participants.size();
         
         if (expectedRecords == 0) {
             return BigDecimal.ZERO;
@@ -106,78 +104,6 @@ public class FacilitatorDashboardService {
         return participants.stream()
                 .mapToLong(p -> (long) p.getAttendances().size())
                 .sum();
-    }
-
-    private Long calculateExpectedAttendanceRecords(List<MeParticipant> participants, List<TrainingModule> modules) {
-        return (long) participants.size() * modules.size();
-    }
-
-    private List<FacilitatorDashboardDTO.MissingAttendanceAlert> findMissingAttendanceAlerts(
-            List<MeParticipant> participants, 
-            List<TrainingModule> modules
-    ) {
-        List<FacilitatorDashboardDTO.MissingAttendanceAlert> alerts = new ArrayList<>();
-        
-        for (MeParticipant participant : participants) {
-            if (participant.getStatus() != ParticipantStatus.ACTIVE) {
-                continue;
-            }
-            
-            List<UUID> attendedModuleIds = participant.getAttendances().stream()
-                    .map(a -> a.getModule().getId())
-                    .distinct()
-                    .toList();
-            
-            for (TrainingModule module : modules) {
-                if (!attendedModuleIds.contains(module.getId())) {
-                    alerts.add(FacilitatorDashboardDTO.MissingAttendanceAlert.builder()
-                            .participantId(participant.getId())
-                            .participantName(participant.getUser().getFirstName() + " " + 
-                                            participant.getUser().getLastName())
-                            .enrollmentId(participant.getId())
-                            .moduleName(module.getModuleName())
-                            .sessionDate(LocalDate.now())
-                            .reason("No attendance recorded for module: " + module.getModuleName())
-                            .build());
-                }
-            }
-        }
-        
-        return alerts;
-    }
-
-    private List<FacilitatorDashboardDTO.PendingScore> findPendingScores(
-            List<MeParticipant> participants,
-            List<TrainingModule> modules
-    ) {
-        List<FacilitatorDashboardDTO.PendingScore> pendingScores = new ArrayList<>();
-        
-        for (MeParticipant participant : participants) {
-            if (participant.getStatus() != ParticipantStatus.ACTIVE) {
-                continue;
-            }
-            
-            List<UUID> scoredModuleIds = participant.getScores().stream()
-                    .map(s -> s.getModule().getId())
-                    .distinct()
-                    .toList();
-            
-            for (TrainingModule module : modules) {
-                if (!scoredModuleIds.contains(module.getId())) {
-                    pendingScores.add(FacilitatorDashboardDTO.PendingScore.builder()
-                            .enrollmentId(participant.getId())
-                            .participantId(participant.getId())
-                            .participantName(participant.getUser().getFirstName() + " " + 
-                                            participant.getUser().getLastName())
-                            .moduleId(module.getId())
-                            .moduleName(module.getModuleName())
-                            .assessmentType("PENDING")
-                            .build());
-                }
-            }
-        }
-        
-        return pendingScores;
     }
 
     private BigDecimal calculateAverageScore(List<MeParticipant> participants) {
@@ -221,28 +147,6 @@ public class FacilitatorDashboardService {
                 .toList();
     }
 
-    private Long countCompletedModules(List<MeParticipant> participants, List<TrainingModule> modules) {
-        long completedCount = 0;
-        
-        for (TrainingModule module : modules) {
-            long participantsWithScores = participants.stream()
-                    .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
-                    .filter(p -> p.getScores().stream()
-                            .anyMatch(s -> s.getModule().getId().equals(module.getId())))
-                    .count();
-            
-            long activeParticipants = participants.stream()
-                    .filter(p -> p.getStatus() == ParticipantStatus.ACTIVE)
-                    .count();
-            
-            if (activeParticipants > 0 && participantsWithScores == activeParticipants) {
-                completedCount++;
-            }
-        }
-        
-        return completedCount;
-    }
-
     private Long calculateActiveParticipantsCount(UUID cohortId) {
         long enrolledCount = participantRepository.countByCohortIdAndStatus(cohortId, ParticipantStatus.ENROLLED);
         long activeCount = participantRepository.countByCohortIdAndStatus(cohortId, ParticipantStatus.ACTIVE);
@@ -263,7 +167,7 @@ public class FacilitatorDashboardService {
                 .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED || p.getStatus() == ParticipantStatus.ACTIVE)
                 .toList();
         
-        List<TrainingModule> modules = new ArrayList<>();
+        // Modules removed - using course-based tracking now
         
         Long thisWeekTotalCount = attendanceRepository.countByCohortIdAndSessionDateBetween(
                 cohortId, thisWeekStart, thisWeekEnd);
@@ -276,10 +180,8 @@ public class FacilitatorDashboardService {
         Long lastWeekPresentCount = attendanceRepository.countPresentByCohortIdAndSessionDateBetween(
                 cohortId, lastWeekStart, lastWeekEnd);
         
-        long thisWeekExpectedCount = thisWeekTotalCount > 0 ? thisWeekTotalCount : 
-                calculateFallbackExpectedCount(activeParticipants.size(), modules.size(), thisWeekStart, thisWeekEnd);
-        long lastWeekExpectedCount = lastWeekTotalCount > 0 ? lastWeekTotalCount :
-                calculateFallbackExpectedCount(activeParticipants.size(), modules.size(), lastWeekStart, lastWeekEnd);
+        long thisWeekExpectedCount = thisWeekTotalCount > 0 ? thisWeekTotalCount : activeParticipants.size();
+        long lastWeekExpectedCount = lastWeekTotalCount > 0 ? lastWeekTotalCount : activeParticipants.size();
         
         BigDecimal thisWeekRate = thisWeekExpectedCount > 0 ?
                 BigDecimal.valueOf(thisWeekPresentCount)
@@ -335,40 +237,5 @@ public class FacilitatorDashboardService {
         return count;
     }
 
-    private long calculateFallbackExpectedCount(long activeParticipantsCount, int modulesCount, 
-                                                LocalDate startDate, LocalDate endDate) {
-        long workingDays = countWorkingDays(startDate, endDate);
-        return activeParticipantsCount * modulesCount * workingDays;
-    }
 
-    private BigDecimal calculateModuleCompletionRate(List<MeParticipant> participants, List<TrainingModule> modules) {
-        if (modules.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        
-        List<MeParticipant> activeParticipants = participants.stream()
-                .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED || p.getStatus() == ParticipantStatus.ACTIVE)
-                .toList();
-        
-        if (activeParticipants.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        
-        long completedModules = 0;
-        for (TrainingModule module : modules) {
-            long participantsWithScores = activeParticipants.stream()
-                    .filter(p -> p.getScores().stream()
-                            .anyMatch(s -> s.getModule().getId().equals(module.getId())))
-                    .count();
-            
-            if (participantsWithScores == activeParticipants.size()) {
-                completedModules++;
-            }
-        }
-        
-        return BigDecimal.valueOf(completedModules)
-                .divide(BigDecimal.valueOf(modules.size()), 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100))
-                .setScale(2, RoundingMode.HALF_UP);
-    }
 }

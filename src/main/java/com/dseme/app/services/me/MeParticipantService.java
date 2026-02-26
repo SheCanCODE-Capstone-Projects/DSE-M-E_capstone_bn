@@ -75,15 +75,30 @@ public class MeParticipantService {
         User currentUser = getCurrentUser();
         Map<String, Object> stats = new HashMap<>();
         
-        long totalParticipants = participantRepository.findAll().stream()
+        // Filter all participants by organization
+        List<MeParticipant> orgParticipants = participantRepository.findAll().stream()
                 .filter(p -> belongsToSameOrganization(p, currentUser))
+                .collect(Collectors.toList());
+        
+        long totalParticipants = orgParticipants.size();
+        long enrolledCount = orgParticipants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.ENROLLED)
+                .count();
+        long activeCount = orgParticipants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.IN_PROGRESS)
+                .count();
+        long completedCount = orgParticipants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.COMPLETED)
+                .count();
+        long droppedCount = orgParticipants.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.DROPPED)
                 .count();
         
         stats.put("totalParticipants", totalParticipants);
-        stats.put("enrolledCount", participantRepository.countByStatus(ParticipantStatus.ENROLLED));
-        stats.put("activeCount", participantRepository.countByStatus(ParticipantStatus.IN_PROGRESS));
-        stats.put("completedCount", participantRepository.countByStatus(ParticipantStatus.COMPLETED));
-        stats.put("droppedCount", participantRepository.countByStatus(ParticipantStatus.DROPPED));
+        stats.put("enrolledCount", enrolledCount);
+        stats.put("activeCount", activeCount);
+        stats.put("completedCount", completedCount);
+        stats.put("droppedCount", droppedCount);
         return stats;
     }
 

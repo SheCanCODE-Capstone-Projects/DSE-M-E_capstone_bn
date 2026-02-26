@@ -26,9 +26,9 @@ public class Score {
     @JoinColumn(name = "participant_id", nullable = false)
     private MeParticipant participant;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "module_id", nullable = false)
-    private TrainingModule module;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignment_id")

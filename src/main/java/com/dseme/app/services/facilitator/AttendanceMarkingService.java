@@ -155,7 +155,7 @@ public class AttendanceMarkingService {
             } else {
                 Attendance attendance = Attendance.builder()
                         .participant(participant)
-                        .module(null)
+                        .course(null)
                         .sessionDate(request.getSessionDate())
                         .status(record.getStatus())
                         .remarks(record.getRemarks())
