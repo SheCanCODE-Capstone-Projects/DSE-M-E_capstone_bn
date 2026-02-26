@@ -25,8 +25,8 @@ public class Attendance {
     private MeParticipant participant;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "module_id")
-    private TrainingModule module;
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @Column(name = "session_date", nullable = false)
     private LocalDate sessionDate;

@@ -11,4 +11,5 @@ public class FacilitatorSummaryDTO {
     private UUID id;
     private String firstName;
     private String lastName;
+    private String email;
 }

@@ -15,10 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ME cohort service: each cohort = one course + one (optional) facilitator + participants.
- * Enables "one organization, many cohorts" where each cohort learns a different course
- * with a different facilitator (e.g. She Can Code: Cohort A = Web Dev + Facilitator X,
- * Cohort B = Data Science + Facilitator Y).
+ * ME cohort service: each cohort = one course + multiple facilitators + participants.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +25,7 @@ public class MeCohortService {
     private final CourseRepository courseRepository;
     private final FacilitatorRepository facilitatorRepository;
     private final UserRepository userRepository;
+    private final MeCohortFacilitatorRepository cohortFacilitatorRepository;
 
     public Page<CohortResponseDTO> getAllCohorts(Pageable pageable) {
         User currentUser = getCurrentUser();
@@ -89,16 +87,9 @@ public class MeCohortService {
         logger.info("Current user partner: {}",
                 currentUser.getPartner() != null ? currentUser.getPartner().getPartnerName() : "NULL");
 
-        Facilitator facilitator = null;
-        if (dto.getFacilitatorId() != null) {
-            facilitator = facilitatorRepository.findById(dto.getFacilitatorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
-        }
-
         MeCohort cohort = MeCohort.builder()
                 .name(dto.getName())
                 .course(course)
-                .facilitator(facilitator)
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .maxParticipants(dto.getMaxParticipants() != null && dto.getMaxParticipants() >= 1
@@ -119,15 +110,8 @@ public class MeCohortService {
         Course course = courseRepository.findById(dto.getCourseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
 
-        Facilitator facilitator = null;
-        if (dto.getFacilitatorId() != null) {
-            facilitator = facilitatorRepository.findById(dto.getFacilitatorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
-        }
-
         cohort.setName(dto.getName());
         cohort.setCourse(course);
-        cohort.setFacilitator(facilitator);
         cohort.setStartDate(dto.getStartDate());
         cohort.setEndDate(dto.getEndDate());
         if (dto.getMaxParticipants() != null && dto.getMaxParticipants() >= 1) {
@@ -163,13 +147,28 @@ public class MeCohortService {
 
     private CohortResponseDTO mapToResponseDTO(MeCohort c) {
         Course course = c.getCourse();
-        Facilitator fac = c.getFacilitator();
         MeCohortBatch batch = c.getBatch();
         int current = c.getParticipants() != null ? c.getParticipants().size() : 0;
+
+        List<FacilitatorSummaryDTO> facilitators = cohortFacilitatorRepository
+                .findByCohortId(c.getId())
+                .stream()
+                .map(cf -> {
+                    Facilitator fac = cf.getFacilitator();
+                    return FacilitatorSummaryDTO.builder()
+                            .id(fac.getId())
+                            .firstName(fac.getUser() != null ? fac.getUser().getFirstName() : null)
+                            .lastName(fac.getUser() != null ? fac.getUser().getLastName() : null)
+                            .email(fac.getUser() != null ? fac.getUser().getEmail() : null)
+                            .build();
+                })
+                .toList();
 
         return CohortResponseDTO.builder()
                 .id(c.getId())
                 .name(c.getName())
+                .batchId(batch != null ? batch.getId() : null)
+                .batchName(batch != null ? batch.getName() : null)
                 .batch(batch != null ? CohortBatchSummaryDTO.builder()
                         .id(batch.getId())
                         .name(batch.getName())
@@ -180,11 +179,7 @@ public class MeCohortService {
                         .code(course.getCode())
                         .level(course.getLevel() != null ? course.getLevel().name() : null)
                         .build())
-                .facilitator(fac != null ? FacilitatorSummaryDTO.builder()
-                        .id(fac.getId())
-                        .firstName(fac.getUser() != null ? fac.getUser().getFirstName() : null)
-                        .lastName(fac.getUser() != null ? fac.getUser().getLastName() : null)
-                        .build() : null)
+                .facilitators(facilitators)
                 .startDate(c.getStartDate())
                 .endDate(c.getEndDate())
                 .maxParticipants(c.getMaxParticipants())

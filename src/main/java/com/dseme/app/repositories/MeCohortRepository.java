@@ -18,7 +18,7 @@ public interface MeCohortRepository extends JpaRepository<MeCohort, UUID> {
     
     List<MeCohort> findByCourse(Course course);
     
-    List<MeCohort> findByFacilitator(Facilitator facilitator);
+    // Removed: findByFacilitator() - use MeCohortFacilitatorRepository instead
     
     List<MeCohort> findByStatus(CohortStatus status);
     
@@ -39,5 +39,5 @@ public interface MeCohortRepository extends JpaRepository<MeCohort, UUID> {
     @Query("SELECT c FROM MeCohort c WHERE c.course.id = :courseId")
     List<MeCohort> findByCourseId(@Param("courseId") UUID courseId);
     
-    List<MeCohort> findByFacilitatorId(UUID facilitatorId);
+    // Removed: findByFacilitatorId() - use MeCohortFacilitatorRepository.findByFacilitatorId() instead
 }

@@ -26,7 +26,10 @@ public class FacilitatorCohortService {
         Facilitator facilitator = facilitatorRepository.findByUserId(context.getFacilitator().getId())
                 .orElseThrow(() -> new RuntimeException("Facilitator not found"));
         
-        List<MeCohort> cohorts = cohortRepository.findByFacilitatorId(facilitator.getId());
+        // Get cohorts through batches since MeCohort no longer has direct facilitator link
+        List<MeCohort> cohorts = facilitator.getCohortBatches().stream()
+                .flatMap(batch -> batch.getTracks().stream())
+                .toList();
         
         return cohorts.stream()
                 .map(this::mapToDTO)

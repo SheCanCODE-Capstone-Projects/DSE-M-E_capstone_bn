@@ -31,8 +31,22 @@ public class MeFacilitatorService {
     private final PasswordEncoder passwordEncoder;
 
     public Page<FacilitatorResponseDTO> getAllFacilitators(Pageable pageable) {
-        return facilitatorRepository.findAll(pageable)
-                .map(this::mapToResponseDTO);
+        User currentUser = getCurrentUser();
+        Page<Facilitator> facilitators = facilitatorRepository.findAll(pageable);
+        
+        // If user has no partner, show all facilitators (admin/donor view)
+        if (currentUser.getPartner() == null) {
+            return facilitators.map(this::mapToResponseDTO);
+        }
+        
+        // Filter by organization
+        List<FacilitatorResponseDTO> filtered = facilitators.getContent().stream()
+                .filter(f -> f.getUser().getPartner() != null && 
+                            f.getUser().getPartner().getPartnerId().equals(currentUser.getPartner().getPartnerId()))
+                .map(this::mapToResponseDTO)
+                .collect(java.util.stream.Collectors.toList());
+        
+        return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
     }
 
     public FacilitatorResponseDTO getFacilitatorById(UUID id) {
@@ -201,7 +215,6 @@ public class MeFacilitatorService {
                     .name(batch.getName() + " - " + course.getName())
                     .batch(batch)
                     .course(course)
-                    .facilitator(facilitator)
                     .startDate(batch.getStartDate())
                     .endDate(batch.getEndDate())
                     .maxParticipants(30)
@@ -210,31 +223,16 @@ public class MeFacilitatorService {
                 
                 cohortRepository.save(cohort);
             } else {
-                // Courses exist - assign facilitator to unassigned ones
-                for (MeCohort cohort : batch.getTracks()) {
-                    if (cohort.getFacilitator() == null) {
-                        cohort.setFacilitator(facilitator);
-                        cohortRepository.save(cohort);
-                    }
-                }
+                // Courses exist - no auto-assignment needed (use junction table)
+                // Facilitator assignment is handled through MeCohortFacilitator junction table
             }
         }
     }
 
     @Transactional
     public void setCohorts(UUID facilitatorId, List<UUID> cohortIds) {
-        Facilitator facilitator = facilitatorRepository.findById(facilitatorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Facilitator not found"));
-
-        List<MeCohort> cohorts = cohortRepository.findAllById(cohortIds);
-        
-        if (cohorts.size() != cohortIds.size()) {
-            throw new ResourceNotFoundException("One or more cohorts not found");
-        }
-
-        facilitator.getCohorts().clear();
-        facilitator.getCohorts().addAll(cohorts);
-        facilitatorRepository.save(facilitator);
+        // This method is deprecated - use MeCohortFacilitatorRepository to manage facilitator-cohort relationships
+        throw new UnsupportedOperationException("Use MeCohortFacilitatorRepository to manage facilitator-cohort relationships");
     }
 
     @Transactional
@@ -312,5 +310,13 @@ public class MeFacilitatorService {
                 .code(course.getCode())
                 .level(course.getLevel().name())
                 .build();
+    }
+
+    private User getCurrentUser() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

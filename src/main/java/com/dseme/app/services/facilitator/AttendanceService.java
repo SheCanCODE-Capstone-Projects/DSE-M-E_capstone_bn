@@ -6,12 +6,11 @@ import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
 import com.dseme.app.models.Attendance;
+import com.dseme.app.models.Course;
 import com.dseme.app.models.MeCohort;
 import com.dseme.app.models.MeParticipant;
-import com.dseme.app.models.TrainingModule;
 import com.dseme.app.repositories.AttendanceRepository;
 import com.dseme.app.repositories.MeParticipantRepository;
-import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +37,6 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final MeParticipantRepository participantRepository;
-    private final TrainingModuleRepository trainingModuleRepository;
     private final CohortIsolationService cohortIsolationService;
 
     /**
@@ -92,20 +90,11 @@ public class AttendanceService {
                 );
             }
 
-            TrainingModule module = trainingModuleRepository.findById(record.getModuleId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                        "Training module not found with ID: " + record.getModuleId()
-                    ));
-
-            if (activeCohort.getProgram() != null && !module.getProgram().getId().equals(activeCohort.getProgram().getId())) {
-                throw new AccessDeniedException(
-                    "Access denied. Module does not belong to your active cohort's program."
-                );
-            }
+            Course course = activeCohort.getCourse();
 
             Attendance attendance = Attendance.builder()
                     .participant(participant)
-                    .module(module)
+                    .course(course)
                     .sessionDate(record.getSessionDate())
                     .status(record.getStatus())
                     .remarks(record.getRemarks())

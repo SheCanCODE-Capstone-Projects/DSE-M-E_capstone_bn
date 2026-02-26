@@ -25,21 +25,22 @@ public class AssignmentGradingService {
     private final ScoreRepository scoreRepository;
     private final MeParticipantRepository participantRepository;
     private final MeCohortRepository cohortRepository;
-    private final TrainingModuleRepository moduleRepository;
     private final CohortIsolationService cohortIsolationService;
 
     // ==================== CREATE ASSIGNMENT ====================
     public AssignmentResponseDTO createAssignment(FacilitatorContext context, CreateAssignmentDTO dto) {
         MeCohort cohort = cohortIsolationService.getFacilitatorActiveCohort(context);
         
-        TrainingModule module = moduleRepository.findById(dto.getModuleId())
-                .orElseThrow(() -> new RuntimeException("Module not found"));
+        Course course = cohort.getCourse();
+        if (course == null) {
+            throw new RuntimeException("Cohort has no course assigned");
+        }
         
         Assignment assignment = Assignment.builder()
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .type(dto.getType())
-                .module(module)
+                .course(course)
                 .cohort(cohort)
                 .dueDate(dto.getDueDate())
                 .maxScore(dto.getMaxScore())
@@ -122,8 +123,8 @@ public class AssignmentGradingService {
                 .title(assignment.getTitle())
                 .description(assignment.getDescription())
                 .type(assignment.getType())
-                .course(assignment.getModule().getProgram().getProgramName())
-                .chapter(assignment.getModule().getModuleName())
+                .course(assignment.getCourse().getName())
+                .chapter(assignment.getTitle())
                 .dueDate(assignment.getDueDate())
                 .maxScore(assignment.getMaxScore())
                 .totalStudents(participants.size())
@@ -170,7 +171,7 @@ public class AssignmentGradingService {
             } else {
                 score = Score.builder()
                         .participant(participant)
-                        .module(assignment.getModule())
+                        .course(assignment.getCourse())
                         .assignment(assignment)
                         .assessmentType(assignment.getType())
                         .assessmentName(assignment.getTitle())
@@ -211,13 +212,15 @@ public class AssignmentGradingService {
             throw new RuntimeException("Assignment does not belong to your cohort");
         }
         
-        TrainingModule module = moduleRepository.findById(dto.getModuleId())
-                .orElseThrow(() -> new RuntimeException("Module not found"));
+        Course course = cohort.getCourse();
+        if (course == null) {
+            throw new RuntimeException("Cohort has no course assigned");
+        }
         
         assignment.setTitle(dto.getTitle());
         assignment.setDescription(dto.getDescription());
         assignment.setType(dto.getType());
-        assignment.setModule(module);
+        assignment.setCourse(course);
         assignment.setDueDate(dto.getDueDate());
         assignment.setMaxScore(dto.getMaxScore());
         
@@ -250,10 +253,10 @@ public class AssignmentGradingService {
                 .title(assignment.getTitle())
                 .description(assignment.getDescription())
                 .type(assignment.getType())
-                .moduleId(assignment.getModule().getId())
-                .moduleName(assignment.getModule().getModuleName())
-                .course(assignment.getModule().getProgram().getProgramName())
-                .chapter(assignment.getModule().getModuleName())
+                .moduleId(assignment.getCourse() != null ? assignment.getCourse().getId() : null)
+                .moduleName(assignment.getCourse() != null ? assignment.getCourse().getName() : "N/A")
+                .course(assignment.getCourse() != null ? assignment.getCourse().getName() : "N/A")
+                .chapter(assignment.getTitle())
                 .dueDate(assignment.getDueDate())
                 .maxScore(assignment.getMaxScore())
                 .totalStudents(participants.size())

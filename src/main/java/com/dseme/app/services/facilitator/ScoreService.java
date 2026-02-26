@@ -6,14 +6,13 @@ import com.dseme.app.dtos.facilitator.UploadScoreDTO;
 import com.dseme.app.enums.CohortStatus;
 import com.dseme.app.exceptions.AccessDeniedException;
 import com.dseme.app.exceptions.ResourceNotFoundException;
+import com.dseme.app.models.Course;
 import com.dseme.app.models.MeCohort;
 import com.dseme.app.models.MeParticipant;
 import com.dseme.app.models.Score;
-import com.dseme.app.models.TrainingModule;
 import com.dseme.app.repositories.AssignmentRepository;
 import com.dseme.app.repositories.MeParticipantRepository;
 import com.dseme.app.repositories.ScoreRepository;
-import com.dseme.app.repositories.TrainingModuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +40,6 @@ public class ScoreService {
 
     private final ScoreRepository scoreRepository;
     private final MeParticipantRepository participantRepository;
-    private final TrainingModuleRepository trainingModuleRepository;
     private final AssignmentRepository assignmentRepository;
     private final CohortIsolationService cohortIsolationService;
 
@@ -104,7 +102,7 @@ public class ScoreService {
 
             Score score = Score.builder()
                     .participant(participant)
-                    .module(assignment.getModule())
+                    .course(assignment.getCourse())
                     .assignment(assignment)
                     .assessmentType(assignment.getType())
                     .assessmentName(assignment.getTitle())
@@ -158,8 +156,8 @@ public class ScoreService {
                 .scoreId(score.getId())
                 .participantId(score.getParticipant().getId())
                 .participantName(participantName)
-                .moduleId(score.getModule().getId())
-                .moduleName(score.getModule().getModuleName())
+                .moduleId(score.getCourse() != null ? score.getCourse().getId() : null)
+                .moduleName(score.getCourse() != null ? score.getCourse().getName() : "N/A")
                 .assessmentType(score.getAssessmentType())
                 .assessmentName(score.getAssessmentName())
                 .scoreValue(score.getScoreValue())
@@ -184,19 +182,19 @@ public class ScoreService {
      * @param moduleId Module ID
      * @return List of scores for the module
      */
-    public List<Score> getModuleScores(UUID moduleId) {
-        return scoreRepository.findByModuleId(moduleId);
+    public List<Score> getModuleScores(UUID courseId) {
+        return scoreRepository.findByCourseId(courseId);
     }
 
     /**
-     * Get scores for a specific participant in a specific module.
+     * Get scores for a specific participant in a specific course.
      * 
      * @param participantId Participant ID
-     * @param moduleId Module ID
-     * @return List of scores for the participant in the module
+     * @param courseId Course ID
+     * @return List of scores for the participant in the course
      */
-    public List<Score> getParticipantModuleScores(UUID participantId, UUID moduleId) {
-        return scoreRepository.findByParticipantIdAndModuleId(participantId, moduleId);
+    public List<Score> getParticipantModuleScores(UUID participantId, UUID courseId) {
+        return scoreRepository.findByParticipantIdAndCourseId(participantId, courseId);
     }
 }
 

@@ -23,10 +23,6 @@ public class Cohort {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "program_id", nullable = false)
-    private Program program;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "center_id", nullable = false)
     private Center center;
 
