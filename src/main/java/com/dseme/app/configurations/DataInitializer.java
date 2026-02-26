@@ -34,14 +34,13 @@ public class DataInitializer implements CommandLineRunner {
         // Safety migration: convert any legacy ADMIN roles in the users table to DONOR
         // This avoids "No enum constant Role.ADMIN" when reading existing users.
         try {
-            int updated = entityManager
-                    .createNativeQuery("UPDATE users SET role = 'DONOR' WHERE role = 'ADMIN'")
-                    .executeUpdate();
-            if (updated > 0) {
-                log.info("Converted {} legacy ADMIN user(s) to DONOR.", updated);
-            }
+            entityManager.createNativeQuery("UPDATE users SET role = 'DONOR' WHERE role = 'ADMIN'").executeUpdate();
+            entityManager.createNativeQuery("UPDATE role_requests SET requested_role = 'DONOR' WHERE requested_role = 'ADMIN'").executeUpdate();
+            entityManager.flush();
+            entityManager.clear();
+            log.info("✅ Converted legacy ADMIN roles to DONOR");
         } catch (Exception e) {
-            log.warn("Failed to normalize legacy ADMIN roles to DONOR. You may still see ADMIN-related errors.", e);
+            log.error("❌ Failed to convert ADMIN roles", e);
         }
 
         createBootstrapDonorUser();
@@ -52,9 +51,13 @@ public class DataInitializer implements CommandLineRunner {
      * This replaces the old ADMIN superuser.
      */
     private void createBootstrapDonorUser() {
-        if (userRepository.findByEmail(adminEmail).isPresent()) {
-            log.info("Bootstrap donor user already exists. Skipping creation.");
-            return;
+        try {
+            if (userRepository.findByEmail(adminEmail).isPresent()) {
+                log.info("Bootstrap donor user already exists. Skipping creation.");
+                return;
+            }
+        } catch (Exception e) {
+            log.warn("Could not check existing user, will attempt creation");
         }
 
         User donor = User.builder()
