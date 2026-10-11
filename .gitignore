@@ -31,13 +31,12 @@ build/
 ### VS Code ###
 
 ### Environment Variables ###
-.env
-.env.local
-.env.production
 
 ### Logs ###
 *.log
+.gitignore
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
-.gitignore
+config.bat
+node_modules
