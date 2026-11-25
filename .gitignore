@@ -36,7 +36,8 @@ build/
 *.log
 .gitignore
 branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
-config.bat
 node_modules
+.vscode/
+.env
+.env.local
+.env.production
