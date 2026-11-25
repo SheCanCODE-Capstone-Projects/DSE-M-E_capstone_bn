@@ -35,5 +35,8 @@ build/
 ### Logs ###
 *.log
 .gitignore
-config.bat
 node_modules
+.vscode/
+.env
+.env.local
+.env.production
